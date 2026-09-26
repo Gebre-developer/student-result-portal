@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserCheck, Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react';
+// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
+import { apiRequest } from '../services/api'; 
 
 function ActivateAccount() {
   const [formData, setFormData] = useState({
@@ -32,19 +34,20 @@ function ActivateAccount() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/activate', {
+      // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
+      // It automatically handles the production (Vercel/Render) vs local environments
+      const data = await apiRequest('/auth/activate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, fullName, email, password })
+        body: JSON.stringify({ 
+          studentId: studentId.trim(), 
+          fullName: fullName.trim(), 
+          email: email.trim(), 
+          password 
+        })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Activation failed. Something went wrong.');
-      }
-
-      setStatusMessage({ type: 'success', text: data.message });
+      // The apiRequest helper handles JSON status checking automatically
+      setStatusMessage({ type: 'success', text: data.message || 'Account activated successfully!' });
       
       // Route transition back to access portal
       setTimeout(() => {
@@ -52,9 +55,8 @@ function ActivateAccount() {
       }, 2500);
 
     } catch (error) {
-      setStatusMessage({ type: 'danger', text: error.message });
+      setStatusMessage({ type: 'danger', text: error.message || 'Activation failed. Something went wrong.' });
     } finally {
-      // 🚀 FIXED: Changed from 'Sandy' to 'finally' to clear the red compilation error
       setLoading(false);
     }
   };

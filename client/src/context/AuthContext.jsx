@@ -25,10 +25,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = () => {
       try {
-        const token = localStorage.getItem('portal_token');
-        const role = localStorage.getItem('portal_role');
-        const fullName = localStorage.getItem('portal_user_name');
-        const studentId = localStorage.getItem('portal_student_id');
+        // UNIFIED KEYS: Swapped out 'portal_...' prefix to match your api.js hooks perfectly
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        const fullName = localStorage.getItem('fullName');
+        const studentId = localStorage.getItem('studentId');
 
         if (token && role) {
           setUser({
@@ -51,10 +52,11 @@ export const AuthProvider = ({ children }) => {
 
   // 2. State-driven authentication login wrapper
   const loginUser = (authPayload) => {
-    localStorage.setItem('portal_token', authPayload.token);
-    localStorage.setItem('portal_role', authPayload.user.role);
-    localStorage.setItem('portal_user_name', authPayload.user.fullName);
-    localStorage.setItem('portal_student_id', authPayload.user.studentId);
+    // UNIFIED STORAGE MUTATIONS
+    localStorage.setItem('token', authPayload.token);
+    localStorage.setItem('role', authPayload.user.role);
+    localStorage.setItem('fullName', authPayload.user.fullName);
+    localStorage.setItem('studentId', authPayload.user.studentId);
 
     setUser({
       token: authPayload.token,
@@ -66,10 +68,11 @@ export const AuthProvider = ({ children }) => {
 
   // 3. State-driven authentication session clearance log out wrapper
   const logoutUser = () => {
-    localStorage.removeItem('portal_token');
-    localStorage.removeItem('portal_role');
-    localStorage.removeItem('portal_user_name');
-    localStorage.removeItem('portal_student_id');
+    // UNIFIED CLEARANCE PURGES
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('fullName');
+    localStorage.removeItem('studentId');
     setUser(null);
   };
 

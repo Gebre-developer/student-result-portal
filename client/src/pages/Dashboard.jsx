@@ -12,9 +12,11 @@ import {
   Mail, 
   BookMarked 
 } from 'lucide-react';
+// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
+import { apiRequest } from '../services/api'; 
 
 function Dashboard() {
-  const { user, logoutUser } = useAuth();
+  const { logoutUser } = useAuth();
   const navigate = useNavigate();
   
   // Local state metrics
@@ -27,28 +29,18 @@ function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // 1. Fetch Profile parameters from backend endpoint
-        const profileRes = await fetch('http://localhost:5000/api/students/me', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${user?.token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!profileRes.ok) {
-          throw new Error('Failed to fetch student profile data parameters.');
-        }
-        const profileData = await profileRes.json();
+        // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
+        // It injects 'Bearer ' token headers and switches URLs automatically
+        const profileData = await apiRequest('/students/me', { method: 'GET' });
         
-        // 🚀 SAFE ARR FILTER: Safely handle both single object and index array database payloads
+        // Safely handle both single object and index array database payloads
         if (Array.isArray(profileData)) {
           setProfile(profileData.length > 0 ? profileData[0] : null);
         } else {
           setProfile(profileData);
         }
 
-        // 2. 🚀 OFFICIAL TIMETABLE DATASET: Directly mapping your 6 semester courses
+        // OFFICIAL TIMETABLE DATASET: Directly mapping your core courses
         setNotices([
           {
             id: 1,
@@ -72,10 +64,8 @@ function Dashboard() {
       }
     };
 
-    if (user?.token) {
-      fetchDashboardData();
-    }
-  }, [user]);
+    fetchDashboardData();
+  }, []);
 
   // Session destruction route handler
   const handleLogout = () => {
@@ -119,7 +109,7 @@ function Dashboard() {
           <div className="col-12">
             <div className="bg-white p-4 rounded-3 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               <div>
-                <h2 className="fw-bold text-dark mb-1">Welcome back, {profile?.full_name || user?.fullName}!</h2>
+                <h2 className="fw-bold text-dark mb-1">Welcome back, {profile?.full_name || 'Student'}!</h2>
                 <p className="text-muted mb-0">Student ID: <span className="fw-semibold text-primary">{profile?.student_id || 'N/A'}</span> | Status: Verified Academic Member</p>
               </div>
               <Link to="/results" className="btn btn-outline-primary fw-semibold d-flex align-items-center gap-2">
@@ -171,7 +161,7 @@ function Dashboard() {
                   <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom-0">
                     <span className="text-muted d-flex align-items-center gap-2"><BookMarked size={16} /> Roster Date</span>
                     <span className="fw-semibold text-dark">
-                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
+                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Active'}
                     </span>
                   </li>
                 </ul>
@@ -189,19 +179,17 @@ function Dashboard() {
               <div className="card-body p-4 bg-white">
                 {notices.length === 0 ? (
                   <div className="text-center py-5">
-                    <p className="text-muted mb-0 small">No current campus notices or result circulars published.</p>
+                    <p className="text-muted mb-0">No active notices at this time.</p>
                   </div>
                 ) : (
                   <div className="d-flex flex-column gap-3">
                     {notices.map((notice) => (
-                      <div key={notice.id} className="p-3 border rounded-3 bg-light position-relative">
-                        <div className="d-flex justify-content-between align-items-start mb-2">
-                          <h6 className="fw-bold text-dark mb-0 pe-3 small">{notice.title}</h6>
-                          <span className="badge bg-secondary-subtle text-secondary fw-normal px-2 py-1" style={{ fontSize: '11px' }}>
-                            {notice.date}
-                          </span>
+                      <div key={notice.id} className="p-3 bg-light rounded-3 border-start border-primary border-3">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <h6 className="fw-bold text-dark mb-0">{notice.title}</h6>
+                          <span className="badge bg-secondary px-2 py-1 font-monospace" style={{ fontSize: '10px' }}>{notice.date}</span>
                         </div>
-                        <p className="text-secondary small mb-0 line-height-base">{notice.message}</p>
+                        <p className="text-muted small mb-0">{notice.message}</p>
                       </div>
                     ))}
                   </div>
@@ -211,7 +199,6 @@ function Dashboard() {
           </div>
 
         </div>
-
       </div>
     </div>
   );

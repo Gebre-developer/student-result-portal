@@ -1,102 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { 
-  GraduationCap, 
   ArrowLeft, 
   Award, 
   Layers, 
   FileText, 
   BookOpen, 
-  AlertCircle 
+  AlertCircle,
+  GraduationCap 
 } from 'lucide-react';
+// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
+import { apiRequest } from '../services/api'; 
 
 function Results() {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Local state container matrix
+  // Core API State Variables Mapping
   const [cgpa, setCgpa] = useState('0.00');
   const [totalCredits, setTotalCredits] = useState(0);
   const [semesters, setSemesters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch results mapping from backend on mount
+  // Automatically trigger grade metric calculations upon layout mount
   useEffect(() => {
-    const fetchResultsData = async () => {
+    const fetchAcademicResults = async () => {
       try {
-        // 1. Dynamic API endpoint configuration using Vite environment variables or local fallback
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        
-        // 2. Safely read token from localStorage if user context is still hydrating
-        const savedToken = localStorage.getItem('token') || user?.token;
+        setLoading(true);
+        setError('');
 
-        if (!savedToken) {
-          throw new Error('No authentication token found. Please sign in again.');
-        }
+        // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
+        // Automatically communicates with your backend endpoint securely
+        const data = await apiRequest('/results/my-results', { method: 'GET' });
 
-        const response = await fetch(`${API_URL}/api/results/my-results`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${savedToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to retrieve grade parameters.');
-        }
-
-        // Bind raw metrics directly to functional UI states
+        // Map backend payload metrics straight into component state slots
         setCgpa(data.cgpa || '0.00');
         setTotalCredits(data.totalCreditsEarned || 0);
         setSemesters(data.semesters || []);
 
       } catch (err) {
-        console.error(err);
-        setError(err.message || 'An error occurred while executing the grade fetching loop.');
+        console.error('Grade History Fetch Failure:', err.message);
+        setError(err.message || 'Unable to retrieve academic history scores.');
       } finally {
         setLoading(false);
       }
     };
 
-    // Trigger calculation data lookup if user context or storage footprint is available
-    if (localStorage.getItem('token') || user?.token) {
-      fetchResultsData();
-    } else {
-      setLoading(false);
-      setError('Please sign in to access your student results ledger.');
-    }
-  }, [user]);
+    fetchAcademicResults();
+  }, []);
 
   if (loading) {
     return (
       <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
         <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading grading metrics ledger...</span>
+          <span className="visually-hidden">Calculating academic metrics...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Global Navigation Header Bar Layout */}
+    <div className="bg-light min-vh-100">
+      {/* Global Navigation Header Component bar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm py-3">
         <div className="container">
           <div className="navbar-brand fw-bold d-flex align-items-center gap-2">
             <GraduationCap size={28} />
-            <span>Academic Performance Ledger</span>
+            <span>Academic Performance Record</span>
           </div>
           <Link to="/dashboard" className="btn btn-light btn-sm text-primary fw-semibold d-flex align-items-center gap-2 shadow-sm">
-            <ArrowLeft size={16} /> Back to Dashboard
+            <ArrowLeft size={16} /> Dashboard Home
           </Link>
         </div>
       </nav>
-
       {/* Main Content Layout Container */}
       <div className="container my-5">
         

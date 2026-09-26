@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, UserCheck, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext'; 
+// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
+import { apiRequest } from '../services/api'; 
 
 function Login() {
-  // 1. Core Form Field and UI Visibility States
   const [formData, setFormData] = useState({ studentId: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -14,63 +15,52 @@ function Login() {
   const { loginUser } = useAuth(); 
   const { studentId, password } = formData;
 
-  // 2. Input Field Change Handlers
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 3. Password Visibility Toggle Handler
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  // 4. Session Authentication Request Dispatcher
   const onSubmit = async (e) => {
     e.preventDefault();
     setStatusMessage({ type: '', text: '' });
     setLoading(true);
 
-    // Dynamic API endpoint configuration using Vite environment variables or local fallback
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
+      // It handles the BASE_URL automatically (localhost or Render)
+      const data = await apiRequest('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Maps the studentId field cleanly to whatever your backend controllers expect (e.g. username/email/studentId)
         body: JSON.stringify({ 
           studentId: studentId.trim(), 
           password 
         })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed.');
-      }
-
-      // Save the returned session token securely in the browser's storage
+      // 3. SAVE ACCESS TOKENS SECURELY IF RETURNED
       if (data.token) {
         localStorage.setItem('token', data.token);
       }
 
-      // Dispatch response token payload directly down to global AuthContext state machine
+      // Dispatch response payload data down to global AuthContext state machine
       loginUser(data);
 
       setStatusMessage({ type: 'success', text: 'Authentication successful! Redirecting...' });
 
-      // 🚀 AUTOMATED ROLE ROUTER: Evaluate user access boundaries dynamically on success
+      // AUTOMATED ROLE ROUTER
       setTimeout(() => {
         if (data.user && data.user.role === 'admin') {
-          navigate('/admin'); // Forward instructors securely to administration view links
+          navigate('/admin'); 
         } else {
-          navigate('/dashboard'); // Forward standard section classmates to home panel grid
+          navigate('/dashboard'); 
         }
       }, 1500);
 
     } catch (error) {
-      setStatusMessage({ type: 'danger', text: error.message });
+      // The helper passes error messages straight here cleanly
+      setStatusMessage({ type: 'danger', text: error.message || 'Authentication failed.' });
     } finally {
       setLoading(false);
     }

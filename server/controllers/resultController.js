@@ -1,3 +1,4 @@
+// server/controllers/resultController.js
 const pool = require("../config/db");
 
 // Helper function to map letter grades to standard grade points if missing in the row
@@ -42,10 +43,13 @@ exports.getMyResults = async (req, res) => {
 
     const dbResult = await pool.query(queryText, [studentId]);
 
+    // SECURE FALLBACK: If they are registered but do not have pre-loaded grades for your class roster
     if (dbResult.rows.length === 0) {
       return res.status(200).json({
-        message: "No published results found for your account at this time.",
+        message:
+          "No results found. You are not registered on the official class list for this semester, or your results have not been published.",
         cgpa: "0.00",
+        totalCreditsEarned: 0,
         semesters: [],
       });
     }

@@ -12,9 +12,11 @@ import {
   RefreshCw,
   BookOpen
 } from 'lucide-react';
+// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
+import { apiRequest } from '../services/api'; 
 
 function AdminDashboard() {
-  const { user, logoutUser } = useAuth();
+  const { logoutUser } = useAuth();
   const navigate = useNavigate();
 
   // Active Tab Toggle State ('single' or 'bulk')
@@ -82,15 +84,12 @@ function AdminDashboard() {
     const { letter, point } = evaluateGradeMetrics(totalMark);
 
     try {
-      const response = await fetch('http://localhost:5000/api/admin/results', {
+      // REFACTORED: Uses our custom environment-aware apiRequest tool instead of local fetch
+      await apiRequest('/admin/results', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user?.token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
-          studentId,
-          courseCode,
+          studentId: studentId.trim(),
+          courseCode: courseCode,
           assignment: assignMark,
           midExam: midMark,
           finalExam: finalMark,
@@ -101,14 +100,15 @@ function AdminDashboard() {
         })
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to submit grade metrics.');
-
-      setStatusMessage({ type: 'success', text: `Successfully updated scores for ${studentId}! Total: ${totalMark.toFixed(1)} (${letter})` });
+      setStatusMessage({ 
+        type: 'success', 
+        text: `Successfully updated scores for ${studentId}! Total: ${totalMark.toFixed(1)} (${letter})` 
+      });
+      
       setGradeForm({ ...gradeForm, studentId: '', assignment: '', midExam: '', finalExam: '' });
 
     } catch (err) {
-      setStatusMessage({ type: 'danger', text: err.message });
+      setStatusMessage({ type: 'danger', text: err.message || 'Failed to submit grade metrics.' });
     } finally {
       setLoading(false);
     }
@@ -128,26 +128,27 @@ function AdminDashboard() {
     formData.append('file', selectedFile);
 
     try {
-      const response = await fetch('http://localhost:5000/api/admin/students/upload', {
+      // REFACTORED: Uses our custom apiRequest tool. Empty headers let the browser inject boundary parameters cleanly.
+      const data = await apiRequest('/admin/students/upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${user?.token}`
-        },
+        headers: {}, 
         body: formData
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Spreadsheet bulk ingestion failed.');
-
-      setStatusMessage({ type: 'success', text: data.message });
+      setStatusMessage({ type: 'success', text: data.message || 'Spreadsheet bulk ingestion successful!' });
       setSelectedFile(null);
       e.target.reset();
 
     } catch (err) {
-      setStatusMessage({ type: 'danger', text: err.message });
+      setStatusMessage({ type: 'danger', text: err.message || 'Spreadsheet bulk ingestion failed.' });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
   };
   return (
     <div className="bg-light min-vh-100">
@@ -160,7 +161,7 @@ function AdminDashboard() {
           </div>
           <button 
             className="btn btn-outline-light btn-sm d-flex align-items-center gap-2"
-            onClick={() => { logoutUser(); navigate('/login'); }}
+            onClick={handleLogout}
           >
             <LogOut size={16} /> Logout
           </button>
@@ -265,23 +266,21 @@ function AdminDashboard() {
             <p className="text-muted small mb-4">Upload a `.csv` sheet to parse and register student rows into Neon. Columns must match the configuration layout order: `studentId, fullName, section, department, year, email`.</p>
 
             <form onSubmit={handleBulkSubmit}>
-              <div className="border border-2 border-dashed rounded-3 p-5 text-center bg-light mb-4 position-relative">
-                <Upload size={40} className="text-muted mb-3 mx-auto d-block" />
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  className="form-control position-absolute top-0 start-0 w-100 h-100 opacity-0" 
-                  style={{ cursor: 'pointer' }}
-                  onChange={handleFileChange}
-                />
-                <span className="fw-bold text-dark d-block mb-1 small">
-                  {selectedFile ? selectedFile.name : "Click here or drag file to upload spreadsheet"}
-                </span>
-                <span className="text-muted small d-block">Supports standard comma-separated text files (.CSV) up to 5MB</span>
+              <div className="mb-4">
+                <label className="form-label fw-semibold text-secondary small">Choose CSV File</label>
+                <div className="input-group">
+                  <input 
+                    type="file" 
+                    className="form-control small" 
+                    accept=".csv" 
+                    onChange={handleFileChange} 
+                    required 
+                  />
+                </div>
               </div>
 
               <button type="submit" className="btn btn-success w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm" disabled={loading}>
-                {loading ? <span className="spinner-border spinner-border-sm" role="status"></span> : <><Upload size={18} /> Execute Bulk Roster Ingestion</>}
+                {loading ? <span className="spinner-border spinner-border-sm" role="status"></span> : <><RefreshCw size={18} /> Process and Upload CSV</>}
               </button>
             </form>
           </div>
