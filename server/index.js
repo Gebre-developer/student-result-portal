@@ -1,12 +1,15 @@
-// server.js or index.js
+// index.js
 const express = require("express");
 const cors = require("cors");
 const app = express();
 
-// Allow frontend requests from Vite's port (5173) or any port you run your client on
+// ✅ FIXED CORS: Grant explicit permission to both local development and your live production URL
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://student-result-portal-omega.vercel.app", // 👈 Your exact live production website domain path
+    ],
     credentials: true,
   }),
 );

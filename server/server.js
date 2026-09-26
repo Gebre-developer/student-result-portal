@@ -11,8 +11,17 @@ const adminRoutes = require("./routes/adminRoutes"); // 🚀 Added admin routes 
 
 const app = express();
 
-// Standard App-Level Middlewares
-app.use(cors());
+// ✅ FIXED CORs: Grant explicit authorization to your live Vercel deployment link
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://student-result-portal-omega.vercel.app", // 👈 Your exact live Vercel URL
+    ],
+    credentials: true,
+  }),
+);
+
 app.use(express.json()); // Essential for handling incoming JSON data payloads
 
 // Mount Application Routing Endpoints
