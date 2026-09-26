@@ -1,5 +1,8 @@
 // client/src/services/api.js
-const BASE_URL = "http://localhost:5000/api";
+
+// Dynamic URL: Uses the Vercel environment variable in production,
+// and falls back to localhost during local development.
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem("token"); // Get auth token if stored
