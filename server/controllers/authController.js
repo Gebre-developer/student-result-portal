@@ -9,19 +9,17 @@ exports.activateAccount = async (req, res) => {
   const { studentId, fullName, email, password } = req.body;
 
   try {
-    // Check if the student exists on the official Section B roster
+    // Check if the student exists on the official Section B roster using ONLY student_id
     const studentCheck = await pool.query(
-      "SELECT * FROM students WHERE student_id = $1 AND email = $2",
-      [studentId, email],
+      "SELECT * FROM students WHERE student_id = $1",
+      [studentId],
     );
 
     if (studentCheck.rows.length === 0) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Verification failed. Student ID or email not found on the official list.",
-        });
+      return res.status(400).json({
+        message:
+          "Verification failed. Student ID not found on the official list.",
+      });
     }
 
     // Check if user credentials have already been registered
@@ -30,12 +28,9 @@ exports.activateAccount = async (req, res) => {
       [studentId],
     );
     if (userCheck.rows.length > 0) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Account has already been activated. Please proceed to login.",
-        });
+      return res.status(400).json({
+        message: "Account has already been activated. Please proceed to login.",
+      });
     }
 
     // Hash the password securely using bcryptjs
@@ -48,10 +43,10 @@ exports.activateAccount = async (req, res) => {
       [studentId, passwordHash, "student"],
     );
 
-    // Update the student profile status to verified
+    // Update the student profile status to verified AND save their email/name
     await pool.query(
-      "UPDATE students SET is_verified = true WHERE student_id = $1",
-      [studentId],
+      "UPDATE students SET email = $1, full_name = $2, is_verified = true WHERE student_id = $3",
+      [email, fullName, studentId],
     );
 
     res
@@ -79,23 +74,19 @@ exports.login = async (req, res) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res
-        .status(400)
-        .json({
-          message: "Invalid credentials. User matching that ID does not exist.",
-        });
+      return res.status(400).json({
+        message: "Invalid credentials. User matching that ID does not exist.",
+      });
     }
 
     const user = userResult.rows[0];
 
     // Check if the user account has been disabled by an administrator
     if (!user.is_active) {
-      return res
-        .status(403)
-        .json({
-          message:
-            "Account access has been deactivated. Please contact your administrator.",
-        });
+      return res.status(403).json({
+        message:
+          "Account access has been deactivated. Please contact your administrator.",
+      });
     }
 
     // Compare incoming plain-text password against the stored bcrypt hash string
