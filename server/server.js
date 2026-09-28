@@ -1,7 +1,6 @@
 require("dotenv").config(); // ⚡ Line 1: Crucial for early parsing of environment properties
 const express = require("express");
 const cors = require("cors");
-const pool = require("./config/db");
 
 // Route Subsystem Imports
 const authRoutes = require("./routes/authRoutes");
@@ -11,24 +10,25 @@ const adminRoutes = require("./routes/adminRoutes"); // 🚀 Added admin routes 
 
 const app = express();
 
-// ✅ FIXED CORs: Grant explicit authorization to your live Vercel deployment link
+// ✅ FIXED CORS: Grant explicit permission to both local development and your live production URL
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://student-result-portal-omega.vercel.app", // 👈 Your exact live Vercel URL
+      "https://student-result-portal-omega.vercel.app", // 👈 Your exact live production website domain path
     ],
     credentials: true,
   }),
 );
 
-app.use(express.json()); // Essential for handling incoming JSON data payloads
+app.use(express.json()); // Required to parse incoming JSON data from the frontend
+app.use(express.urlencoded({ extended: true }));
 
-// Mount Application Routing Endpoints
-app.use("/api/auth", authRoutes);
-app.use("/api/students", studentRoutes);
-app.use("/api/results", resultRoutes);
-app.use("/api/admin", adminRoutes); // 🚀 Mounted admin routes pipeline
+// ⚡ REMOVED "/api" PREFIX: Routes match your frontend links exactly now
+app.use("/auth", authRoutes);
+app.use("/students", studentRoutes);
+app.use("/results", resultRoutes);
+app.use("/admin", adminRoutes); // 🚀 Mounted admin routes pipeline
 
 // Base Diagnostic Route
 app.get("/", (req, res) => {
@@ -37,26 +37,5 @@ app.get("/", (req, res) => {
   );
 });
 
-const PORT = process.env.PORT || 5000;
-
-// Verify Database Connection State cleanly over HTTP before starting server listener
-pool.query("SELECT NOW()", (err, result) => {
-  if (err) {
-    console.error(
-      "❌ Connection failed. Could not verify Neon PostgreSQL connection:",
-    );
-    console.error("Error Details:", err.message);
-    process.exit(1);
-  } else {
-    console.log(
-      "Connected smoothly to your Neon PostgreSQL database over HTTP!",
-    );
-    console.log(
-      "🚀 Connected to the Neon PostgreSQL database cluster securely.",
-    );
-
-    app.listen(PORT, () => {
-      console.log(`Server is operating smoothly on port ${PORT}`);
-    });
-  }
-});
+// Export app configuration instance so index.js can securely mount and start it
+module.exports = app;
