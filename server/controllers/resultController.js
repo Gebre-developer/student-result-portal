@@ -1,7 +1,6 @@
 // server/controllers/resultController.js
 const pool = require("../config/db");
 
-// Helper function to map letter grades to standard grade points if missing in the row
 const getGradePoint = (letterGrade) => {
   if (!letterGrade) return 0.0;
   const mapping = {
@@ -20,23 +19,18 @@ const getGradePoint = (letterGrade) => {
   return mapping[letterGrade.toUpperCase()] || 0.0;
 };
 
-// Fetch student's grades and calculate Semester GPA & CGPA
 exports.getMyResults = async (req, res) => {
   try {
-    // 🚀 FIXED KEYWORD: Extracts your verified identifier precisely from req.user payload
+    // Extracts your verified identity precisely from req.user payload
     const studentId =
       req.user?.student_id || req.user?.id || req.user?.studentId;
 
     if (!studentId) {
       return res
         .status(400)
-        .json({
-          message:
-            "Student identity could not be verified from active token signature.",
-        });
+        .json({ message: "Student identity could not be verified." });
     }
 
-    // Fetch all published results along with course details via an inner join
     const queryText = `
       SELECT 
         r.id,
@@ -54,18 +48,15 @@ exports.getMyResults = async (req, res) => {
 
     const dbResult = await pool.query(queryText, [studentId]);
 
-    // SECURE FALLBACK: If they are registered but do not have pre-loaded grades for your class roster
     if (dbResult.rows.length === 0) {
       return res.status(200).json({
-        message:
-          "No results found. You are not registered on the official class list for this semester, or your results have not been published.",
+        message: "No results published yet.",
         cgpa: "0.00",
         totalCreditsEarned: 0,
         semesters: [],
       });
     }
 
-    // Grouping records by Academic Year and Semester
     const semestersMap = {};
     let totalCumulativePoints = 0;
     let totalCumulativeCredits = 0;
@@ -76,11 +67,9 @@ exports.getMyResults = async (req, res) => {
       const gradePoint = getGradePoint(row.grade);
       const qualityPoints = gradePoint * creditHour;
 
-      // Accumulate global totals for overall CGPA math
       totalCumulativePoints += qualityPoints;
       totalCumulativeCredits += creditHour;
 
-      // Initialize semester group if it doesn't exist
       if (!semestersMap[semesterKey]) {
         semestersMap[semesterKey] = {
           semesterName: semesterKey,
@@ -92,21 +81,18 @@ exports.getMyResults = async (req, res) => {
         };
       }
 
-      // Add course and accumulate semester totals
       semestersMap[semesterKey].courses.push({
         id: row.id,
         courseCode: row.courseCode,
         courseName: row.courseName,
         creditHour: creditHour,
         grade: row.grade,
-        gradePoint: gradePoint,
       });
 
       semestersMap[semesterKey].totalSemesterPoints += qualityPoints;
       semestersMap[semesterKey].totalSemesterCredits += creditHour;
     });
 
-    // Format structure and compute final GPA metrics
     const formattedSemesters = Object.values(semestersMap).map((sem) => {
       const gpa =
         sem.totalSemesterCredits > 0
@@ -115,31 +101,23 @@ exports.getMyResults = async (req, res) => {
 
       return {
         semesterName: sem.semesterName,
-        academicYear: sem.academicYear,
-        semester: sem.semester,
         gpa: gpa,
         courses: sem.courses,
       };
     });
 
-    // Compute ultimate Cumulative GPA (CGPA)
     const cgpa =
       totalCumulativeCredits > 0
         ? (totalCumulativePoints / totalCumulativeCredits).toFixed(2)
         : "0.00";
 
-    // Return payload structured cleanly for React UI state updates
     res.status(200).json({
-      studentId: studentId,
       cgpa: cgpa,
       totalCreditsEarned: totalCumulativeCredits,
-      semesters: formattedSemesters.reverse(), // Present most recent semester first
+      semesters: formattedSemesters.reverse(),
     });
   } catch (error) {
-    console.error(
-      "Fetch and Calculate GPA Metrics Controller Error:",
-      error.message,
-    );
+    console.error("GPA Controller Error:", error.message);
     res
       .status(500)
       .json({ message: "Server error while calculating academic metrics." });
