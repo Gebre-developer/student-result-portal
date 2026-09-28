@@ -1,6 +1,6 @@
-// server/controllers/resultController.js
 const pool = require("../config/db");
 
+// Helper function to map standard letter grades to grade points
 const getGradePoint = (letterGrade) => {
   if (!letterGrade) return 0.0;
   const mapping = {
@@ -16,21 +16,26 @@ const getGradePoint = (letterGrade) => {
     D: 1.0,
     F: 0.0,
   };
-  return mapping[letterGrade.toUpperCase()] || 0.0;
+  return mapping[letterGrade.toUpperCase().trim()] || 0.0;
 };
 
+// @desc    Secure individual student grading retrieval with GPA/CGPA analysis
+// @route   GET /api/results/my-results
+// @access  Private (Student Profile Only)
 exports.getMyResults = async (req, res) => {
   try {
-    // Extracts your verified identity precisely from req.user payload
+    // Extracts string-based student_id cleanly from verification payload middleware
     const studentId =
       req.user?.student_id || req.user?.id || req.user?.studentId;
 
     if (!studentId) {
-      return res
-        .status(400)
-        .json({ message: "Student identity could not be verified." });
+      return res.status(401).json({
+        success: false,
+        message: "Student identity verification failed. Access denied.",
+      });
     }
 
+    // MATCHED SCHEMA QUERY: Only requests columns that actually exist in your database
     const queryText = `
       SELECT 
         r.id,
@@ -50,7 +55,9 @@ exports.getMyResults = async (req, res) => {
 
     if (dbResult.rows.length === 0) {
       return res.status(200).json({
-        message: "No results published yet.",
+        success: true,
+        message:
+          "No marksheet profiles have been published yet for your account profile.",
         cgpa: "0.00",
         totalCreditsEarned: 0,
         semesters: [],
@@ -61,10 +68,12 @@ exports.getMyResults = async (req, res) => {
     let totalCumulativePoints = 0;
     let totalCumulativeCredits = 0;
 
+    // Aggregate metrics across academic terms
     dbResult.rows.forEach((row) => {
       const semesterKey = `${row.academicYear} - Semester ${row.semester}`;
       const creditHour = parseInt(row.creditHour, 10) || 0;
-      const gradePoint = getGradePoint(row.grade);
+      const gradePoint =
+        parseFloat(row.grade_point) || getGradePoint(row.grade);
       const qualityPoints = gradePoint * creditHour;
 
       totalCumulativePoints += qualityPoints;
@@ -93,6 +102,7 @@ exports.getMyResults = async (req, res) => {
       semestersMap[semesterKey].totalSemesterCredits += creditHour;
     });
 
+    // Format output data for each individual semester
     const formattedSemesters = Object.values(semestersMap).map((sem) => {
       const gpa =
         sem.totalSemesterCredits > 0
@@ -102,6 +112,7 @@ exports.getMyResults = async (req, res) => {
       return {
         semesterName: sem.semesterName,
         gpa: gpa,
+        totalSemesterCredits: sem.totalSemesterCredits,
         courses: sem.courses,
       };
     });
@@ -112,14 +123,17 @@ exports.getMyResults = async (req, res) => {
         : "0.00";
 
     res.status(200).json({
+      success: true,
       cgpa: cgpa,
       totalCreditsEarned: totalCumulativeCredits,
-      semesters: formattedSemesters.reverse(),
+      semesters: formattedSemesters.reverse(), // Shows most recent semester first on the UI
     });
   } catch (error) {
-    console.error("GPA Controller Error:", error.message);
-    res
-      .status(500)
-      .json({ message: "Server error while calculating academic metrics." });
+    console.error("Critical GPA Controller Error Context:", error.message);
+    res.status(500).json({
+      success: false,
+      message:
+        "Server error encountered during academic metrics calculations pipelines.",
+    });
   }
 };
