@@ -9,34 +9,47 @@ import {
   AlertCircle,
   GraduationCap 
 } from 'lucide-react';
-// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
 import { apiRequest } from '../services/api'; 
 
 function Results() {
   const navigate = useNavigate();
 
   // Core API State Variables Mapping
+  const [results, setResults] = useState([]);
   const [cgpa, setCgpa] = useState('0.00');
   const [totalCredits, setTotalCredits] = useState(0);
-  const [semesters, setSemesters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Automatically trigger grade metric calculations upon layout mount
   useEffect(() => {
     const fetchAcademicResults = async () => {
       try {
         setLoading(true);
         setError('');
 
-        // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
-        // Automatically communicates with your backend endpoint securely
-        const data = await apiRequest('/results/my-results', { method: 'GET' });
+        // Fetch flat row records matching your SQL database layout output
+        const data = await apiRequest('/results/my-grades', { method: 'GET' });
+        setResults(data || []);
 
-        // Map backend payload metrics straight into component state slots
-        setCgpa(data.cgpa || '0.00');
-        setTotalCredits(data.totalCreditsEarned || 0);
-        setSemesters(data.semesters || []);
+        // Calculate dynamic tracking stats based on credit hours and grade points
+        let runningPointsTotal = 0;
+        let runningCreditsCount = 0;
+
+        (data || []).forEach(item => {
+          const credits = parseInt(item.credit_hour || 0, 10);
+          const totalMark = parseFloat(item.total_mark || 0);
+          
+          runningCreditsCount += credits;
+          
+          // Quality point scaling matrix matching standard Ethiopian university systems
+          if (totalMark >= 85) runningPointsTotal += 4.0 * credits;
+          else if (totalMark >= 75) runningPointsTotal += 3.0 * credits;
+          else if (totalMark >= 60) runningPointsTotal += 2.0 * credits;
+          else if (totalMark >= 50) runningPointsTotal += 1.0 * credits;
+        });
+
+        setTotalCredits(runningCreditsCount);
+        setCgpa(runningCreditsCount > 0 ? (runningPointsTotal / runningCreditsCount).toFixed(2) : '0.00');
 
       } catch (err) {
         console.error('Grade History Fetch Failure:', err.message);
@@ -61,7 +74,6 @@ function Results() {
 
   return (
     <div className="bg-light min-vh-100">
-      {/* Global Navigation Header Component bar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm py-3">
         <div className="container">
           <div className="navbar-brand fw-bold d-flex align-items-center gap-2">
@@ -73,22 +85,20 @@ function Results() {
           </Link>
         </div>
       </nav>
-      {/* Main Content Layout Container */}
+
       <div className="container my-5">
-        
         {error && (
           <div className="alert alert-danger shadow-sm text-center small mb-4" role="alert">
-            <AlertCircle size={18} className="me-2 inline" /> {error}
+            <AlertCircle size={18} className="me-2 d-inline-block" /> {error}
           </div>
         )}
 
-        {/* 1. TOP HERO REGION: Global Summary Metric Overview Cards */}
+        {/* Hero Score Tracker Header Cards */}
         <div className="row g-4 mb-5">
-          {/* Cumulative GPA (CGPA) Badge Card */}
           <div className="col-12 col-md-6">
             <div className="card border-0 shadow-sm rounded-3 bg-dark text-white p-4 d-flex flex-row align-items-center justify-content-between">
               <div>
-                <p className="text-light small text-uppercase fw-semibold mb-1 opacity-75">Overall CGPA</p>
+                <p className="text-light small text-uppercase fw-semibold mb-1 opacity-75">Portal CGPA</p>
                 <h1 className="display-4 fw-bold mb-0 text-success">{cgpa}</h1>
               </div>
               <div className="bg-success bg-opacity-25 p-3 rounded-circle text-success">
@@ -97,7 +107,6 @@ function Results() {
             </div>
           </div>
 
-          {/* Total Accumulated Credit Hours Badge Card */}
           <div className="col-12 col-md-6">
             <div className="card border-0 shadow-sm rounded-3 bg-white p-4 d-flex flex-row align-items-center justify-content-between">
               <div>
@@ -111,69 +120,57 @@ function Results() {
           </div>
         </div>
 
-        {/* 2. BODY REGION: Dynamic Loop Iteration Over Semester Blocks */}
         <h4 className="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
           <FileText size={22} className="text-primary" />
-          <span>Semester Performance Breakdown</span>
+          <span>Continuous Assessment Grid</span>
         </h4>
 
-        {semesters.length === 0 ? (
+        {results.length === 0 ? (
           <div className="card border-0 shadow-sm p-5 text-center bg-white rounded-3">
             <BookOpen size={48} className="text-muted mb-3 mx-auto" />
             <h5 className="text-secondary fw-semibold mb-1">No Academic Records Live</h5>
             <p className="text-muted small mb-0">Your instructors haven't published or uploaded any course grades for your section yet.</p>
           </div>
         ) : (
-          <div className="d-flex flex-column gap-5">
-            {semesters.map((sem, index) => (
-              <div key={index} className="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
-                
-                {/* Semester Summary Header Section */}
-                <div className="bg-light px-4 py-3 border-bottom d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
-                  <h5 className="fw-bold text-dark mb-0">{sem.semesterName}</h5>
-                  <div className="bg-primary bg-opacity-10 border border-primary border-opacity-25 px-3 py-1 rounded-pill text-primary fw-bold small">
-                    Semester GPA: {sem.gpa}
-                  </div>
-                </div>
-
-                {/* Grade Loop Rendering Table */}
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0 px-4 small">
-                    <thead className="table-light text-secondary fw-semibold">
-                      <tr>
-                        <th className="ps-4 py-3" style={{ width: '20%' }}>Course Code</th>
-                        <th className="py-3" style={{ width: '45%' }}>Course Title</th>
-                        <th className="text-center py-3" style={{ width: '15%' }}>Credit Hours</th>
-                        <th className="text-center py-3" style={{ width: '20%' }}>Earned Grade</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-dark border-top-0">
-                      {sem.courses.map((course) => (
-                        <tr key={course.id || course.courseCode}>
-                          <td className="ps-4 py-3 fw-semibold text-primary">{course.courseCode}</td>
-                          <td className="py-3 fw-medium">{course.courseName}</td>
-                          <td className="text-center py-3 text-secondary">{course.creditHour}</td>
-                          <td className="text-center py-3">
-                            <span className={`badge px-3 py-2 rounded-2 fw-bold ${
-                              ['A+', 'A', 'A-'].includes(course.grade) ? 'bg-success-subtle text-success' :
-                              ['B+', 'B', 'B-'].includes(course.grade) ? 'bg-primary-subtle text-primary' :
-                              ['C+', 'C', 'C-'].includes(course.grade) ? 'bg-warning-subtle text-warning' :
-                              'bg-danger-subtle text-danger'
-                            }`} style={{ minWidth: '45px', fontSize: '12px' }}>
-                              {course.grade}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-              </div>
-            ))}
+          <div className="card border-0 shadow-sm rounded-3 overflow-hidden bg-white">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0 px-4 small">
+                <thead className="table-light text-secondary fw-semibold">
+                  <tr>
+                    <th className="ps-4 py-3" style={{ width: '15%' }}>Course Code</th>
+                    <th className="py-3" style={{ width: '35%' }}>Course Description</th>
+                    <th className="text-center py-3">Assignment (15%)</th>
+                    <th className="text-center py-3">Mid Exam (35%)</th>
+                    <th className="text-center py-3">Final Exam (50%)</th>
+                    <th className="text-center py-3">Total Score</th>
+                    <th className="text-center py-3 pe-4">Letter Grade</th>
+                  </tr>
+                </thead>
+                <tbody className="text-dark border-top-0">
+                  {results.map((item, index) => (
+                    <tr key={index}>
+                      <td className="ps-4 py-3 fw-bold text-primary font-monospace">{item.course_code}</td>
+                      <td className="py-3 fw-semibold text-secondary">{item.course_name} <span className="text-muted small">({item.credit_hour} Cr)</span></td>
+                      <td className="text-center py-3 text-muted">{parseFloat(item.assignment || 0).toFixed(2)}</td>
+                      <td className="text-center py-3 text-muted">{parseFloat(item.mid_exam || 0).toFixed(2)}</td>
+                      <td className="text-center py-3 text-muted font-monospace">{parseFloat(item.final_exam || 0).toFixed(2)}</td>
+                      <td className="text-center py-3 fw-bold text-dark">{parseFloat(item.total_mark || 0).toFixed(2)} / 100</td>
+                      <td className="text-center py-3 pe-4">
+                        <span className={`badge px-3 py-2 rounded-2 fw-bold ${
+                          ['A+', 'A', 'A-', 'B+', 'B'].includes(item.grade) ? 'bg-success-subtle text-success' :
+                          ['B-', 'C+', 'C'].includes(item.grade) ? 'bg-warning-subtle text-warning' :
+                          'bg-danger-subtle text-danger'
+                        }`} style={{ minWidth: '45px', fontSize: '12px' }}>
+                          {item.grade || 'N/A'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
-
       </div>
     </div>
   );

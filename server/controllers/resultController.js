@@ -3,6 +3,7 @@ const pool = require("../config/db");
 
 // Helper function to map letter grades to standard grade points if missing in the row
 const getGradePoint = (letterGrade) => {
+  if (!letterGrade) return 0.0;
   const mapping = {
     "A+": 4.0,
     A: 4.0,
@@ -22,8 +23,18 @@ const getGradePoint = (letterGrade) => {
 // Fetch student's grades and calculate Semester GPA & CGPA
 exports.getMyResults = async (req, res) => {
   try {
-    // Row-Level Privacy Guard: extract student_id directly from the verified JWT payload
-    const studentId = req.user.studentId;
+    // 🚀 FIXED KEYWORD: Extracts your verified identifier precisely from req.user payload
+    const studentId =
+      req.user?.student_id || req.user?.id || req.user?.studentId;
+
+    if (!studentId) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Student identity could not be verified from active token signature.",
+        });
+    }
 
     // Fetch all published results along with course details via an inner join
     const queryText = `
@@ -61,7 +72,7 @@ exports.getMyResults = async (req, res) => {
 
     dbResult.rows.forEach((row) => {
       const semesterKey = `${row.academicYear} - Semester ${row.semester}`;
-      const creditHour = parseInt(row.creditHour, 10);
+      const creditHour = parseInt(row.creditHour, 10) || 0;
       const gradePoint = getGradePoint(row.grade);
       const qualityPoints = gradePoint * creditHour;
 
