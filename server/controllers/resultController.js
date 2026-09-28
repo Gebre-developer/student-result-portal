@@ -1,4 +1,5 @@
-const pool = require("../config/db");
+// server/controllers/resultController.js (PART 1)
+const Result = require("../models/Result");
 
 // Helper function to map standard letter grades to grade points
 const getGradePoint = (letterGrade) => {
@@ -20,11 +21,11 @@ const getGradePoint = (letterGrade) => {
 };
 
 // @desc    Secure individual student grading retrieval with GPA/CGPA analysis
-// @route   GET /api/results/my-results
+// @route   GET /api/results/my-grades
 // @access  Private (Student Profile Only)
 exports.getMyResults = async (req, res) => {
   try {
-    // Extracts string-based student_id cleanly from verification payload middleware
+    // SECURE ID: Extracts string-based student_id cleanly from authentication token
     const studentId =
       req.user?.student_id || req.user?.id || req.user?.studentId;
 
@@ -35,45 +36,28 @@ exports.getMyResults = async (req, res) => {
       });
     }
 
-    // MATCHED SCHEMA QUERY: Only requests columns that actually exist in your database
-    const queryText = `
-      SELECT 
-        r.id,
-        r.course_code AS "courseCode",
-        c.course_name AS "courseName",
-        c.credit_hour AS "creditHour",
-        r.grade,
-        r.semester,
-        r.academic_year AS "academicYear"
-      FROM results r
-      JOIN courses c ON r.course_code = c.course_code
-      WHERE r.student_id = $1 AND r.published = true
-      ORDER BY r.academic_year ASC, r.semester ASC;
-    `;
+    // Call the model file (Result.js) to query the Neon database
+    const rows = await Result.findByStudentId(studentId);
 
-    const dbResult = await pool.query(queryText, [studentId]);
-
-    if (dbResult.rows.length === 0) {
+    if (!rows || rows.length === 0) {
       return res.status(200).json({
         success: true,
-        message:
-          "No marksheet profiles have been published yet for your account profile.",
+        message: "No results published yet.",
         cgpa: "0.00",
         totalCreditsEarned: 0,
         semesters: [],
       });
     }
-
+    // server/controllers/resultController.js (PART 2)
     const semestersMap = {};
     let totalCumulativePoints = 0;
     let totalCumulativeCredits = 0;
 
-    // Aggregate metrics across academic terms
-    dbResult.rows.forEach((row) => {
+    // Aggregate courses across chronological academic terms
+    rows.forEach((row) => {
       const semesterKey = `${row.academicYear} - Semester ${row.semester}`;
       const creditHour = parseInt(row.creditHour, 10) || 0;
-      const gradePoint =
-        parseFloat(row.grade_point) || getGradePoint(row.grade);
+      const gradePoint = getGradePoint(row.grade);
       const qualityPoints = gradePoint * creditHour;
 
       totalCumulativePoints += qualityPoints;
@@ -101,8 +85,8 @@ exports.getMyResults = async (req, res) => {
       semestersMap[semesterKey].totalSemesterPoints += qualityPoints;
       semestersMap[semesterKey].totalSemesterCredits += creditHour;
     });
-
-    // Format output data for each individual semester
+    // server/controllers/resultController.js (PART 3)
+    // Format output arrays for each individual semester card
     const formattedSemesters = Object.values(semestersMap).map((sem) => {
       const gpa =
         sem.totalSemesterCredits > 0
@@ -117,16 +101,18 @@ exports.getMyResults = async (req, res) => {
       };
     });
 
+    // Compute absolute cumulative average matching standard registrar calculations
     const cgpa =
       totalCumulativeCredits > 0
         ? (totalCumulativePoints / totalCumulativeCredits).toFixed(2)
         : "0.00";
 
+    // Returns structural parameters cleanly to your React client dashboard
     res.status(200).json({
       success: true,
       cgpa: cgpa,
       totalCreditsEarned: totalCumulativeCredits,
-      semesters: formattedSemesters.reverse(), // Shows most recent semester first on the UI
+      semesters: formattedSemesters.reverse(), // Shows most recent term first on screen
     });
   } catch (error) {
     console.error("Critical GPA Controller Error Context:", error.message);
