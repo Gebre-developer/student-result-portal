@@ -1,9 +1,10 @@
 // client/src/services/api.js
 
-// 1. Updated BASE_URL configuration line
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// Ensure BASE_URL drops any accidental trailing slash to keep combining reliable
+const BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/\$/, "");
 
-// 2. KEEP everything below here exactly as it was!
 export const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem("token");
 
@@ -16,7 +17,13 @@ export const apiRequest = async (endpoint, options = {}) => {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+  // Format the endpoint string so it ALWAYS guarantees a single leading slash
+  const formattedEndpoint = endpoint.startsWith("/")
+    ? endpoint
+    : `/${endpoint}`;
+
+  // Combines perfectly into: https://onrender.com
+  const response = await fetch(`${BASE_URL}${formattedEndpoint}`, {
     ...options,
     headers,
   });
