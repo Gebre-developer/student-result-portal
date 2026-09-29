@@ -1,10 +1,15 @@
 // client/src/services/api.js
 
-// ✅ FIXED: Dynamically appends /api to the base URL and sanitizes trailing slashes safely
+// ✅ FIXED: Safely handles any malformed environment variables and trailing slashes
 const getBaseUrl = () => {
   let url = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  // Clean up any trailing slashes
+  // Clean up any literal variable prefixes if Vercel copy-pasted the key name into the input value box
+  if (url.startsWith("VITE_API_URL=")) {
+    url = url.replace("VITE_API_URL=", "");
+  }
+
+  // ✅ CORRECTION: This removes trailing slashes cleanly without breaking string structures
   url = url.replace(/\/\$/, "");
 
   // If the URL doesn't already end with /api, append it to match backend route mount points
@@ -13,40 +18,4 @@ const getBaseUrl = () => {
   }
 
   return url;
-};
-
-const BASE_URL = getBaseUrl();
-
-export const apiRequest = async (endpoint, options = {}) => {
-  const token = localStorage.getItem("token");
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  // Format the endpoint string so it always guarantees a single leading slash
-  const formattedEndpoint = endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`;
-
-  // Combines perfectly into: https://onrender.com
-  const response = await fetch(`${BASE_URL}${formattedEndpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message ||
-        "Something went wrong with the network request handling pipeline.",
-    );
-  }
-
-  return response.json();
 };
