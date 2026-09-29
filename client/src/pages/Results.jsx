@@ -1,6 +1,7 @@
 // client/src/pages/Results.jsx
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+// Changed from default import to the named apiRequest function to fix the Vercel crash
+import { apiRequest } from '../services/api';
 
 export default function Results() {
   const [data, setData] = useState({ results: [], gpa: "0.00", total_credits: 0 });
@@ -8,9 +9,10 @@ export default function Results() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/results/my-results')
+    // Executing the named apiRequest handler instead of api.get
+    apiRequest('get', '/results/my-results')
       .then(res => {
-        setData(res.data);
+        setData(res.data || res); // Fallback evaluation if res directly returns payload data
         setLoading(false);
       })
       .catch(err => {
@@ -44,7 +46,7 @@ export default function Results() {
 
       {/* Courses Cards Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {data.results.map((course) => (
+        {data.results && data.results.map((course) => (
           <div key={course.course_code} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition-all relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
             <div>
