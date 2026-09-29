@@ -35,14 +35,13 @@ function ActivateAccount() {
 
     try {
       // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
-      // It automatically handles the production (Vercel/Render) vs local environments
+      // ✅ FIXED: JSON keys mapped to snake_case to match authController requirements
       const data = await apiRequest('/auth/activate', {
         method: 'POST',
         body: JSON.stringify({ 
-          studentId: studentId.trim(), 
-          fullName: fullName.trim(), 
+          student_id: studentId.trim(), 
           email: email.trim(), 
-          password 
+          password: password 
         })
       });
 
@@ -87,7 +86,7 @@ function ActivateAccount() {
               <input
                 type="text"
                 className="form-control border-start-0 ps-0"
-                placeholder="e.g. SE/103/15"
+                placeholder="e.g. BDU1702026"
                 name="studentId"
                 value={studentId}
                 onChange={onChange}
@@ -103,7 +102,7 @@ function ActivateAccount() {
               <input
                 type="text"
                 className="form-control border-start-0 ps-0"
-                placeholder="e.g. Abebe Chala"
+                placeholder="e.g. Gebreselassie Sisay"
                 name="fullName"
                 value={fullName}
                 onChange={onChange}
