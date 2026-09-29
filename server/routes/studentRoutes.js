@@ -1,9 +1,19 @@
+// server/routes/studentRoutes.js
 const express = require("express");
 const router = express.Router();
-const studentController = require("../controllers/studentController");
-const authMiddleware = require("../middleware/authMiddleware");
 
-// GET /api/students/me - Protected route to pull self profile parameters
-router.get("/me", authMiddleware, studentController.getStudentProfile);
+// 💡 FIX: Destructure the controller methods cleanly
+const {
+  getStudentProfile,
+  getStudentGrades,
+} = require("../controllers/studentController");
+
+// 💡 FIX: Destructure the protection middleware from your authMiddleware file
+const { protect } = require("../middleware/authMiddleware");
+
+// Route configurations mapping context matching pipelines
+// Ensure 'protect', 'getStudentProfile', and 'getStudentGrades' are completely defined functions!
+router.get("/me", protect, getStudentProfile);
+router.get("/grades", protect, getStudentGrades);
 
 module.exports = router;

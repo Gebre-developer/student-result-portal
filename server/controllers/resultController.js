@@ -1,125 +1,80 @@
-// server/controllers/resultController.js (PART 1)
-const Result = require("../models/Result");
+// server/controllers/resultController.js
+const pool = require("../config/db");
 
-// Helper function to map standard letter grades to grade points
-const getGradePoint = (letterGrade) => {
-  if (!letterGrade) return 0.0;
-  const mapping = {
-    "A+": 4.0,
-    A: 4.0,
-    "A-": 3.75,
-    "B+": 3.5,
-    B: 3.0,
-    "B-": 2.75,
-    "C+": 2.5,
-    C: 2.0,
-    "C-": 1.75,
-    D: 1.0,
-    F: 0.0,
-  };
-  return mapping[letterGrade.toUpperCase().trim()] || 0.0;
+// Helper function implementing standard software engineering scale conversions
+const computeLetterGrade = (total) => {
+  if (total >= 85) return { letter: "A", points: 4.0 };
+  if (total >= 80) return { letter: "A-", points: 3.75 };
+  if (total >= 75) return { letter: "B+", points: 3.5 };
+  if (total >= 70) return { letter: "B", points: 3.0 };
+  if (total >= 65) return { letter: "B-", points: 2.75 };
+  if (total >= 60) return { letter: "C+", points: 2.5 };
+  if (total >= 50) return { letter: "C", points: 2.0 };
+  if (total >= 45) return { letter: "D", points: 1.0 };
+  return { letter: "F", points: 0.0 };
 };
 
-// @desc    Secure individual student grading retrieval with GPA/CGPA analysis
-// @route   GET /api/results/my-grades
-// @access  Private (Student Profile Only)
-exports.getMyResults = async (req, res) => {
+/**
+ * Fetch and calculate dynamic aggregated grades securely for the logged-in student
+ */
+const getMyResults = async (req, res) => {
+  const studentId = req.user.student_id; // Secure context passed down from auth middleware
+
   try {
-    // SECURE ID: Extracts string-based student_id cleanly from authentication token
-    const studentId =
-      req.user?.student_id || req.user?.id || req.user?.studentId;
+    const queryText = `
+      SELECT c.course_code, c.course_name, c.credit_hour,
+             COALESCE(g.midterm, 0) as midterm, 
+             COALESCE(g.assignment, 0) as assignment, 
+             COALESCE(g.final_exam, 0) as final_exam,
+             COALESCE(g.total_mark, 0) as total_mark
+      FROM courses c
+      LEFT JOIN grades g ON c.course_code = g.course_code AND g.student_id = $1
+      ORDER BY c.course_code ASC;
+    `;
 
-    if (!studentId) {
-      return res.status(401).json({
-        success: false,
-        message: "Student identity verification failed. Access denied.",
-      });
-    }
+    const dbResult = await pool.query(queryText, [studentId]);
 
-    // Call the model file (Result.js) to query the Neon database
-    const rows = await Result.findByStudentId(studentId);
+    let totalEarnedPoints = 0;
+    let totalCreditHours = 0;
 
-    if (!rows || rows.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No results published yet.",
-        cgpa: "0.00",
-        totalCreditsEarned: 0,
-        semesters: [],
-      });
-    }
-    // server/controllers/resultController.js (PART 2)
-    const semestersMap = {};
-    let totalCumulativePoints = 0;
-    let totalCumulativeCredits = 0;
+    const formattedResults = dbResult.rows.map((row) => {
+      const numericTotal = parseFloat(row.total_mark);
+      const gradeMetrics = computeLetterGrade(numericTotal);
 
-    // Aggregate courses across chronological academic terms
-    rows.forEach((row) => {
-      const semesterKey = `${row.academicYear} - Semester ${row.semester}`;
-      const creditHour = parseInt(row.creditHour, 10) || 0;
-      const gradePoint = getGradePoint(row.grade);
-      const qualityPoints = gradePoint * creditHour;
-
-      totalCumulativePoints += qualityPoints;
-      totalCumulativeCredits += creditHour;
-
-      if (!semestersMap[semesterKey]) {
-        semestersMap[semesterKey] = {
-          semesterName: semesterKey,
-          academicYear: row.academicYear,
-          semester: row.semester,
-          courses: [],
-          totalSemesterPoints: 0,
-          totalSemesterCredits: 0,
-        };
-      }
-
-      semestersMap[semesterKey].courses.push({
-        id: row.id,
-        courseCode: row.courseCode,
-        courseName: row.courseName,
-        creditHour: creditHour,
-        grade: row.grade,
-      });
-
-      semestersMap[semesterKey].totalSemesterPoints += qualityPoints;
-      semestersMap[semesterKey].totalSemesterCredits += creditHour;
-    });
-    // server/controllers/resultController.js (PART 3)
-    // Format output arrays for each individual semester card
-    const formattedSemesters = Object.values(semestersMap).map((sem) => {
-      const gpa =
-        sem.totalSemesterCredits > 0
-          ? (sem.totalSemesterPoints / sem.totalSemesterCredits).toFixed(2)
-          : "0.00";
+      totalEarnedPoints += gradeMetrics.points * row.credit_hour;
+      totalCreditHours += row.credit_hour;
 
       return {
-        semesterName: sem.semesterName,
-        gpa: gpa,
-        totalSemesterCredits: sem.totalSemesterCredits,
-        courses: sem.courses,
+        ...row,
+        letter_grade: gradeMetrics.letter,
+        grade_points: gradeMetrics.points,
       };
     });
 
-    // Compute absolute cumulative average matching standard registrar calculations
-    const cgpa =
-      totalCumulativeCredits > 0
-        ? (totalCumulativePoints / totalCumulativeCredits).toFixed(2)
+    const semesterGPA =
+      totalCreditHours > 0
+        ? (totalEarnedPoints / totalCreditHours).toFixed(2)
         : "0.00";
 
-    // Returns structural parameters cleanly to your React client dashboard
     res.status(200).json({
       success: true,
-      cgpa: cgpa,
-      totalCreditsEarned: totalCumulativeCredits,
-      semesters: formattedSemesters.reverse(), // Shows most recent term first on screen
+      student_id: studentId,
+      gpa: semesterGPA,
+      total_credits: totalCreditHours,
+      results: formattedResults,
     });
   } catch (error) {
-    console.error("Critical GPA Controller Error Context:", error.message);
-    res.status(500).json({
-      success: false,
-      message:
-        "Server error encountered during academic metrics calculations pipelines.",
-    });
+    console.error("GPA calculation chain exception:", error.message);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Internal metrics calculation system error.",
+      });
   }
+};
+
+// 💡 FIX 3: Export as an object matching your destructured require paths!
+module.exports = {
+  getMyResults,
 };

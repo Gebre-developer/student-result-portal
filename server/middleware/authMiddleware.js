@@ -1,47 +1,57 @@
+// server/middleware/authMiddleware.js
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
 
-module.exports = function (req, res, next) {
-  // 1. Extract the token from the standard HTTP Authorization header
-  const authHeader = req.header("Authorization");
-
-  // Check if the Authorization header is completely missing
-  if (!authHeader) {
-    return res
-      .status(401)
-      .json({ message: "Access denied. No authentication token supplied." });
-  }
-
-  // Parse the standard "Bearer <token>" format string cleanly
+/**
+ * Secures routes by extracting and validating the JWT authorization header.
+ * Attaches verified payload fields directly to the request object.
+ */
+const protect = async (req, res, next) => {
   let token;
-  if (authHeader.startsWith("Bearer ")) {
-    token = authHeader.split(" ")[1];
-  } else {
-    token = authHeader; // Fallback in case Postman sends the token directly without Bearer prefix
+
+  // 1. Look for token inside the Authorization request header
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    try {
+      // Isolate token from 'Bearer <TOKEN>' pattern layout string
+      token = req.headers.authorization.split(" ")[1];
+
+      // 2. Decode signature structure using your hidden JWT environment key variable
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "fallback_secret_key",
+      );
+
+      // 3. Mount student profile details context to the request structure state
+      req.user = {
+        id: decoded.id,
+        student_id: decoded.student_id,
+        role: decoded.role, // 'student' or 'admin'
+      };
+
+      return next(); // Step out to the next execution controller row node safely
+    } catch (error) {
+      console.error("Token verification pipeline failure:", error.message);
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message:
+            "Not authorized: Invalid configuration token token signatures.",
+        });
+    }
   }
 
-  // Double-check if the token text string itself is blank
   if (!token) {
     return res
       .status(401)
       .json({
-        message: "Access denied. Authentication token is invalid or empty.",
+        success: false,
+        message: "Not authorized: No session authorization tokens discovered.",
       });
   }
-
-  try {
-    // 2. Verify the signed token signature using your server environment key
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // 3. Bind the extracted user profile data directly onto the Express request object
-    req.user = decoded.user;
-
-    // Pass control to the next middleware or controller callback function down the chain
-    next();
-  } catch (error) {
-    console.error("Token validation interceptor fault:", error.message);
-    res
-      .status(401)
-      .json({ message: "Token is expired or invalid. Access unauthorized." });
-  }
 };
+
+// Explicit object dictionary wrapper export format to cleanly match destructured calls
+module.exports = { protect };

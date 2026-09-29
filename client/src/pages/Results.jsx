@@ -1,147 +1,113 @@
-// src/components/Results.jsx (PART 1)
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+// client/src/pages/Results.jsx
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 export default function Results() {
-  const [academicData, setAcademicData] = useState(null);
+  const [data, setData] = useState({ results: [], gpa: "0.00", total_credits: 0 });
+  const [activeCourse, setActiveCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchStudentGrades = async () => {
-      try {
-        setLoading(true);
-        // Replace this URL string with your live Render server domain URL once deployed
-        const response = await axios.get("http://localhost:5000/api/results/my-grades", {
-          withCredentials: true, // Crucial for passing HTTP-Only credentials securely
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}` // Standard token protection backup
-          }
-        });
-
-        if (response.data.success || response.data.semesters) {
-          setAcademicData(response.data);
-        } else {
-          setError("Failed to fetch academic records framework mapping arrays.");
-        }
-      } catch (err) {
-        console.error("Frontend Results Fetch Error:", err);
-        setError(err.response?.data?.message || "Server communication pipeline fault.");
-      } finally {
+    api.get('/results/my-results')
+      .then(res => {
+        setData(res.data);
         setLoading(false);
-      }
-    };
-
-    fetchStudentGrades();
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ padding: "3rem", textAlign: "center", fontFamily: "sans-serif", color: "#666" }}>
-        <h3>Loading your secure transcript performance boxes...</h3>
-      </div>
-    );
-  }
+  if (loading) return <div className="text-center p-12 text-slate-400 font-mono">Connecting to Neon cluster engines...</div>;
 
-  if (error) {
-    return (
-      <div style={{ padding: "2rem", textAlign: "center", fontFamily: "sans-serif", color: "#dc3545" }}>
-        <h3>Error Accessing Metrics</h3>
-        <p>{error}</p>
-      </div>
-    );
-  }
-  // src/components/Results.jsx (PART 2)
   return (
-    <div style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto", fontFamily: "sans-serif", backgroundColor: "#f8f9fa" }}>
-      <h2 style={{ marginBottom: "1.5rem", color: "#333", borderBottom: "2px solid #e9ecef", paddingBottom: "0.5rem" }}>
-        Academic Performance Dashboard
-      </h2>
-
-      {/* ============================================================
-          METRIC BOXES ROW (CGPA & CREDITS GRID LAYOUT)
-          ============================================================ */}
-      <div style={{ display: "flex", gap: "1.5rem", marginBottom: "2.5rem" }}>
-        {/* Cumulative GPA Box */}
-        <div style={{
-          flex: "1", backgroundColor: "#ffffff", padding: "1.5rem", borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0,0,0,0.05)", borderLeft: "5px solid #28a745"
-        }}>
-          <span style={{ fontSize: "0.9rem", color: "#6c757d", textTransform: "uppercase", fontWeight: "bold" }}>
-            Cumulative GPA (CGPA)
-          </span>
-          <h1 style={{ margin: "0.5rem 0 0 0", fontSize: "2.5rem", color: "#212529" }}>
-            {academicData?.cgpa || "0.00"}
-          </h1>
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
+      {/* Overview Analytics Header */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+        <div>
+          <h1 className="text-3xl font-black text-white">Academic Performance Portal</h1>
+          <p className="text-slate-400 font-mono text-sm mt-1">Logged ID: <span className="text-indigo-400">{data.student_id}</span></p>
         </div>
-
-        {/* Total Credits Box */}
-        <div style={{
-          flex: "1", backgroundColor: "#ffffff", padding: "1.5rem", borderRadius: "10px",
-          boxShadow: "0 4px 6px rgba(0,0,0,0.05)", borderLeft: "5px solid #007bff"
-        }}>
-          <span style={{ fontSize: "0.9rem", color: "#6c757d", textTransform: "uppercase", fontWeight: "bold" }}>
-            Total Credits Earned
-          </span>
-          <h1 style={{ margin: "0.5rem 0 0 0", fontSize: "2.5rem", color: "#212529" }}>
-            {academicData?.totalCreditsEarned || 0} Cr. Hrs
-          </h1>
+        <div className="flex gap-6 bg-slate-950/50 p-4 rounded-2xl border border-slate-800">
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-wider font-bold text-slate-500">Current GPA</p>
+            <p className="text-3xl font-black text-emerald-400 mt-1">{data.gpa}</p>
+          </div>
+          <div className="w-px bg-slate-800"></div>
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-wider font-bold text-slate-500">Total Credits</p>
+            <p className="text-3xl font-black text-indigo-400 mt-1">{data.total_credits}</p>
+          </div>
         </div>
       </div>
-      // src/components/Results.jsx (PART 3)
-      {/* ============================================================
-          CHRONOLOGICAL SEMESTER TERM DATA VIEWS
-          ============================================================ */}
-      {academicData?.semesters && academicData.semesters.length > 0 ? (
-        academicData.semesters.map((sem, index) => (
-          <div key={index} style={{
-            backgroundColor: "#ffffff", padding: "1.5rem", borderRadius: "10px",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.03)", marginBottom: "2rem"
-          }}>
-            {/* Semester Header Box */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #dee2e6", paddingBottom: "0.75rem", marginBottom: "1rem" }}>
-              <h3 style={{ margin: 0, color: "#495057" }}>{sem.semesterName}</h3>
-              <div style={{ backgroundColor: "#e2f0d9", color: "#385723", padding: "0.4rem 0.8rem", borderRadius: "20px", fontWeight: "bold", fontSize: "0.9rem" }}>
-                GPA: {sem.gpa}
+
+      {/* Courses Cards Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {data.results.map((course) => (
+          <div key={course.course_code} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-700 transition-all relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full pointer-events-none group-hover:bg-indigo-500/10 transition-colors"></div>
+            <div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-mono font-bold bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-md border border-indigo-500/10">
+                  {course.course_code}
+                </span>
+                <span className="text-xs text-slate-500 font-medium font-mono">{course.credit_hour} Cr.Hrs</span>
+              </div>
+              <h3 className="text-xl font-bold mt-4 mb-6 text-white leading-snug line-clamp-2 h-14">{course.course_name}</h3>
+            </div>
+            
+            <button
+              onClick={() => setActiveCourse(course)}
+              className="w-full bg-slate-800 hover:bg-indigo-600 hover:text-white transition-all text-slate-300 font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 border border-slate-700/50 hover:border-indigo-500"
+            >
+              👁️ See Result
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Grade Details Drawer Component */}
+      {activeCourse && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-white">{activeCourse.course_name}</h2>
+                <p className="text-xs font-mono text-slate-500 mt-0.5">{activeCourse.course_code} — {activeCourse.credit_hour} Credit Hours</p>
+              </div>
+              <span className={`text-2xl font-black font-mono px-3 py-1 rounded-xl ${activeCourse.letter_grade === 'F' ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                {activeCourse.letter_grade}
+              </span>
+            </div>
+            
+            <div className="space-y-3.5 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400 font-medium">Midterm Exam (30%)</span>
+                <span className="font-mono font-bold text-white">{activeCourse.midterm}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400 font-medium">Continuous Assignment (20%)</span>
+                <span className="font-mono font-bold text-white">{activeCourse.assignment}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400 font-medium">Final Examination (50%)</span>
+                <span className="font-mono font-bold text-white">{activeCourse.final_exam}</span>
+              </div>
+              <div className="h-px bg-slate-800 my-2"></div>
+              <div className="flex justify-between items-center text-base font-bold">
+                <span className="text-indigo-400">Total Score Aggregated</span>
+                <span className="font-mono text-white text-lg">{activeCourse.total_mark}</span>
               </div>
             </div>
 
-            {/* Courses Sheet Table */}
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ backgroundColor: "#f1f3f5", color: "#495057", borderBottom: "2px solid #dee2e6" }}>
-                    <th style={{ padding: "0.75rem" }}>Course Code</th>
-                    <th style={{ padding: "0.75rem" }}>Course Name</th>
-                    <th style={{ padding: "0.75rem", textAlign: "center" }}>Credit Hours</th>
-                    <th style={{ padding: "0.75rem", textAlign: "center" }}>Letter Grade</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sem.courses && sem.courses.map((course) => (
-                    <tr key={course.id} style={{ borderBottom: "1px solid #dee2e6", color: "#333" }}>
-                      <td style={{ padding: "0.75rem", fontWeight: "bold", color: "#007bff" }}>{course.courseCode}</td>
-                      <td style={{ padding: "0.75rem" }}>{course.courseName}</td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>{course.creditHour}</td>
-                      <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                        <span style={{
-                          backgroundColor: course.grade.startsWith("A") ? "#d4edda" : "#fff3cd",
-                          color: course.grade.startsWith("A") ? "#155724" : "#856404",
-                          padding: "0.25rem 0.6rem", borderRadius: "4px", fontWeight: "bold"
-                        }}>
-                          {course.grade}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <button
+              onClick={() => setActiveCourse(null)}
+              className="mt-5 w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded-xl transition-all border border-slate-700/40"
+            >
+              Dismiss Record View
+            </button>
           </div>
-        ))
-      ) : (
-        <div style={{ textAlign: "center", color: "#777", padding: "2rem", backgroundColor: "#fff", borderRadius: "10px" }}>
-          No formal grading transcripts registered for your account mapping profile.
         </div>
       )}
     </div>

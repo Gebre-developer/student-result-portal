@@ -1,127 +1,163 @@
+// server/controllers/authController.js
 const pool = require("../config/db");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-// ==========================================
-// 1. Verify Student and Activate/Register Account
-// ==========================================
-exports.activateAccount = async (req, res) => {
-  const { studentId, fullName, email, password } = req.body;
+/**
+ * STEP 1A: Student Account Activation
+ * Validates a student's ID against the pre-approved roster list of 61 students.
+ */
+const activateAccount = async (req, res) => {
+  const { student_id, email, password } = req.body;
+
+  // Basic structural body fields verification validation
+  if (!student_id || !email || !password) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Please fill out all activation fields completely (Student ID, Email, Password).",
+    });
+  }
+
+  const client = await pool.connect();
 
   try {
-    // Check if user credentials have already been registered to prevent ID theft
-    const userCheck = await pool.query(
-      "SELECT * FROM users WHERE student_id = $1",
-      [studentId],
+    await client.query("BEGIN");
+
+    // 1. Verify if the student exists in the pre-approved class list
+    const rosterCheck = await client.query(
+      "SELECT * FROM students WHERE student_id = $1",
+      [student_id.trim().toUpperCase()],
     );
-    if (userCheck.rows.length > 0) {
-      return res.status(400).json({
+
+    if (rosterCheck.rows.length === 0) {
+      return res.status(403).json({
+        success: false,
         message:
-          "Account has already been activated with this ID. Please proceed to login.",
+          "Access Denied: This Student ID is not authorized or registered in the Section B class list.",
       });
     }
 
-    // Hash the password securely using bcryptjs
+    const studentProfile = rosterCheck.rows[0];
+
+    // 2. Prevent duplicate profile activations
+    if (studentProfile.is_activated) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This student profile account is already active. Please proceed directly to login.",
+      });
+    }
+
+    // 3. Encrypt the chosen password using a secure hashing algorithm salt string length
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // ALL students can register here successfully!
-    await pool.query(
-      "INSERT INTO users (student_id, password_hash, role) VALUES ($1, $2, $3)",
-      [studentId, passwordHash, "student"],
+    // 4. Save credentials to users authentication database log register
+    await client.query(
+      "INSERT INTO users (student_id, email, password_hash) VALUES ($1, $2, $3)",
+      [
+        student_id.trim().toUpperCase(),
+        email.trim().toLowerCase(),
+        passwordHash,
+      ],
     );
 
-    // IF they happen to be on your official roster, update their profile status to verified
-    const studentCheck = await pool.query(
-      "SELECT * FROM students WHERE student_id = $1",
-      [studentId],
+    // 5. Toggle the activation state flag inside the master students roster table
+    await client.query(
+      "UPDATE students SET is_activated = TRUE WHERE student_id = $1",
+      [student_id.trim().toUpperCase()],
     );
 
-    if (studentCheck.rows.length > 0) {
-      await pool.query(
-        "UPDATE students SET email = $1, full_name = $2, is_verified = true WHERE student_id = $3",
-        [email, fullName, studentId],
-      );
-    }
+    await client.query("COMMIT");
 
     res.status(201).json({
-      message: "Account created successfully! You can now log in.",
+      success: true,
+      message:
+        "Your profile has been successfully activated! You can now log into your portal dashboard safely.",
     });
   } catch (error) {
-    console.error("Activation Error:", error.message);
+    await client.query("ROLLBACK");
+    console.error("Activation pipeline failure context:", error.message);
     res.status(500).json({
-      message: "Server error during registration workflow.",
+      success: false,
+      message:
+        "Internal server processing error occurred during student profile activation loop chains.",
+    });
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * STEP 1B: Secure Student Portal Login Handler
+ * Verifies password matching, validates registration profiles, and hands down session keys.
+ */
+const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Please enter both your registered Email and Password.",
+    });
+  }
+
+  try {
+    // 1. Fetch user mapping matching data logs from Neon server cluster tables
+    const userQuery = await pool.query(
+      "SELECT u.*, s.name, s.is_activated FROM users u JOIN students s ON u.student_id = s.student_id WHERE u.email = $1",
+      [email.trim().toLowerCase()],
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid credentials: Specified profile account email address does not exist.",
+      });
+    }
+
+    const user = userQuery.rows[0];
+
+    // 2. Cross-reference encrypted crypt string verification hashes matches
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid credentials: Correct password combination verification check dropped.",
+      });
+    }
+
+    // 3. Generate a signed secure JSON Web Token mapping session parameters context metadata
+    const token = jwt.sign(
+      { id: user.id, student_id: user.student_id, role: "student" },
+      process.env.JWT_SECRET || "fallback_secret_key",
+      { expiresIn: "7d" }, // Active session signature shelf life spans 7 consecutive days loop
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Authentication handshake complete.",
+      token,
+      user: {
+        student_id: user.student_id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error("Login verification loop exception:", error.message);
+    res.status(500).json({
+      success: false,
+      message:
+        "Internal server error occurred within validation check structures.",
     });
   }
 };
 
-// ==========================================
-// 2. Student & Admin Login Handler
-// ==========================================
-exports.login = async (req, res) => {
-  const { studentId, password } = req.body;
-
-  try {
-    const userResult = await pool.query(
-      "SELECT * FROM users WHERE student_id = $1",
-      [studentId],
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(400).json({
-        message: "Invalid credentials. User matching that ID does not exist.",
-      });
-    }
-
-    const user = userResult.rows[0]; // Targeted the single user row object cleanly
-
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid credentials. Incorrect password.",
-      });
-    }
-
-    // Dynamic payload mapping based on whether they exist in the official class roster
-    let userDetails = { fullName: "Student User", email: "" };
-    const studentProfile = await pool.query(
-      "SELECT full_name, email FROM students WHERE student_id = $1",
-      [studentId],
-    );
-
-    if (studentProfile.rows.length > 0) {
-      userDetails.fullName = studentProfile.rows[0].full_name;
-      userDetails.email = studentProfile.rows[0].email;
-    }
-
-    const payload = {
-      user: {
-        studentId: user.student_id,
-        role: user.role,
-      },
-    };
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET || "fallback_secret",
-      { expiresIn: "24h" },
-      (err, token) => {
-        if (err) throw err;
-        res.json({
-          token,
-          user: {
-            studentId: user.student_id,
-            role: user.role,
-            fullName: userDetails.fullName,
-            email: userDetails.email,
-          },
-        });
-      },
-    );
-  } catch (error) {
-    console.error("Login Endpoint Error:", error.message);
-    res.status(500).json({
-      message: "Server error during authentication validation loop.",
-    });
-  }
+module.exports = {
+  activateAccount,
+  login,
 };

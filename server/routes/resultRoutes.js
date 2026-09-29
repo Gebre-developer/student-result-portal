@@ -2,15 +2,14 @@
 const express = require("express");
 const router = express.Router();
 
-// 1. Import your working authentication middleware token parser
-const authMiddleware = require("../middleware/authMiddleware");
+// 💡 FIX 1: Ensure you import using matching destructured curly brackets
+const { getMyResults } = require("../controllers/resultController");
 
-// 2. Import your GPA and score calculations controller matrix
-const resultController = require("../controllers/resultController");
+// 💡 FIX 2: Ensure your middleware import matches its export structure exactly
+const { protect } = require("../middleware/authMiddleware");
 
-// 🚀 FIXED PATH MATCH: Listens directly to GET /results/my-grades
-// The authMiddleware securely parses the payload into req.user first
-router.get("/my-grades", authMiddleware, resultController.getMyResults);
+// Secure GET routing pipeline mapping architecture link matching
+// Ensure 'protect' and 'getMyResults' are fully defined functions!
+router.get("/my-results", protect, getMyResults);
 
-// Export the router pipeline configuration safely for server.js to use
 module.exports = router;

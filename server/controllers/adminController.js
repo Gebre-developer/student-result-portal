@@ -1,78 +1,92 @@
-const stream = require("stream");
-const csvParser = require("csv-parser");
+// server/controllers/adminController.js
 const pool = require("../config/db");
 
-// Handle Bulk Student imports from an uploaded CSV file
-exports.bulkImportStudents = async (req, res) => {
+/**
+ * Transactional Batch-Upsert for Assessment Marks
+ * Expects { "grades": [ { "student_id": "...", "course_code": "...", "midterm": 24, "assignment": 15, "final_exam": 45 } ] }
+ */
+const bulkUploadGrades = async (req, res) => {
+  const { grades } = req.body;
+
+  // 1. Structural payload checks
+  if (!grades || !Array.isArray(grades) || grades.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Invalid payload layout. 'grades' property must be a non-empty array.",
+    });
+  }
+
+  const client = await pool.connect();
+
   try {
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ message: "Please upload a CSV file to parse." });
+    // 2. Begin secure atomic transaction loop segment block
+    await client.query("BEGIN");
+
+    for (const record of grades) {
+      const { student_id, course_code, midterm, assignment, final_exam } =
+        record;
+
+      // Numeric parsing schema constraints enforcement controls
+      const mid = midterm !== undefined ? parseFloat(midterm) : 0;
+      const assign = assignment !== undefined ? parseFloat(assignment) : 0;
+      const finalE = final_exam !== undefined ? parseFloat(final_exam) : 0;
+
+      // 3. Academic limit confirmation guards
+      if (
+        mid < 0 ||
+        mid > 30 ||
+        assign < 0 ||
+        assign > 20 ||
+        finalE < 0 ||
+        finalE > 50
+      ) {
+        throw new Error(
+          `Out of range score bounds on ID ${student_id} for course ${course_code}. Mid max is 30, Assg max is 20, Final max is 50.`,
+        );
+      }
+
+      const upsertQuery = `
+        INSERT INTO results (student_id, course_code, midterm, assignment, final_exam)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (student_id, course_code) 
+        DO UPDATE SET 
+          midterm = EXCLUDED.midterm,
+          assignment = EXCLUDED.assignment,
+          final_exam = EXCLUDED.final_exam,
+          id = results.id;
+      `;
+
+      await client.query(upsertQuery, [
+        student_id,
+        course_code,
+        mid,
+        assign,
+        finalE,
+      ]);
     }
 
-    const studentsToInsert = [];
-    const bufferStream = new stream.PassThrough();
-    bufferStream.end(req.file.buffer);
+    // 4. Commit everything together safely
+    await client.query("COMMIT");
 
-    // Parse the file data buffer line-by-line
-    bufferStream
-      .pipe(
-        csvParser([
-          "studentId",
-          "fullName",
-          "section",
-          "department",
-          "year",
-          "email",
-        ]),
-      )
-      .on("data", (row) => {
-        // Skip header row if the user included column titles in the Excel template
-        if (
-          row.studentId.toLowerCase() !== "studentid" &&
-          row.studentId.trim() !== ""
-        ) {
-          studentsToInsert.push(row);
-        }
-      })
-      .on("end", async () => {
-        try {
-          let successCount = 0;
-
-          // Loop over parsed spreadsheet values and insert them into your Postgres roster
-          for (const student of studentsToInsert) {
-            await pool.query(
-              `INSERT INTO students (student_id, full_name, section, department, year, email, is_verified)
-               VALUES ($1, $2, $3, $4, $5, $6, false)
-               ON CONFLICT (student_id) DO NOTHING`,
-              [
-                student.studentId.trim(),
-                student.fullName.trim(),
-                student.section.trim(),
-                student.department.trim(),
-                parseInt(student.year, 10) || 3,
-                student.email.trim(),
-              ],
-            );
-            successCount++;
-          }
-
-          res.status(200).json({
-            message: `Bulk roster import complete! Successfully parsed and updated ${successCount} student profiles inside your Neon cluster.`,
-          });
-        } catch (dbError) {
-          console.error("Database insertion array error:", dbError.message);
-          res.status(500).json({
-            message:
-              "Database failure during bulk registry update processing loop.",
-          });
-        }
-      });
+    res.status(200).json({
+      success: true,
+      message: `Successfully processed and synchronized academic marks for ${grades.length} student records inside Neon DB.`,
+    });
   } catch (error) {
-    console.error("CSV Upload System Error:", error.message);
-    res
-      .status(500)
-      .json({ message: "Server error during structural file parsing." });
+    // Structural safety rollback triggered automatically on faulty loop errors
+    await client.query("ROLLBACK");
+    console.error("Bulk upload transaction failure:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Database transactional rollback triggered.",
+      error: error.message,
+    });
+  } finally {
+    client.release(); // Free up pool thread resources back to resource manager stack context
   }
 };
+
+// Object wrapper export to avoid routing mismatch collisions
+module.exports = { bulkUploadGrades };
