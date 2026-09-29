@@ -1,9 +1,21 @@
 // client/src/services/api.js
 
-// Ensure BASE_URL drops any accidental trailing slash to keep combining reliable
-const BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000"
-).replace(/\/\$/, "");
+// ✅ FIXED: Dynamically appends /api to the base URL and sanitizes trailing slashes safely
+const getBaseUrl = () => {
+  let url = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  // Clean up any trailing slashes
+  url = url.replace(/\/\$/, "");
+
+  // If the URL doesn't already end with /api, append it to match backend route mount points
+  if (!url.endsWith("/api")) {
+    url = `${url}/api`;
+  }
+
+  return url;
+};
+
+const BASE_URL = getBaseUrl();
 
 export const apiRequest = async (endpoint, options = {}) => {
   const token = localStorage.getItem("token");
@@ -17,7 +29,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Format the endpoint string so it ALWAYS guarantees a single leading slash
+  // Format the endpoint string so it always guarantees a single leading slash
   const formattedEndpoint = endpoint.startsWith("/")
     ? endpoint
     : `/${endpoint}`;
@@ -30,7 +42,10 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Something went wrong");
+    throw new Error(
+      errorData.message ||
+        "Something went wrong with the network request handling pipeline.",
+    );
   }
 
   return response.json();
