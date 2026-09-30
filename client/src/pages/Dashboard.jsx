@@ -31,13 +31,15 @@ function Dashboard() {
       try {
         // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
         // It injects 'Bearer ' token headers and switches URLs automatically
-        const profileData = await apiRequest('/students/me', { method: 'GET' });
+        const dataPayload = await apiRequest('/students/me', { method: 'GET' });
         
-        // Safely handle both single object and index array database payloads
-        if (Array.isArray(profileData)) {
-          setProfile(profileData.length > 0 ? profileData[0] : null);
+        // ✅ FIXED: Safely isolate the nested profile array from your backend JSON wrapper response
+        const studentRows = dataPayload?.profile;
+
+        if (Array.isArray(studentRows)) {
+          setProfile(studentRows.length > 0 ? studentRows[0] : null);
         } else {
-          setProfile(profileData);
+          setProfile(studentRows || null);
         }
 
         // OFFICIAL TIMETABLE DATASET: Directly mapping your core courses
@@ -184,10 +186,10 @@ function Dashboard() {
                 ) : (
                   <div className="d-flex flex-column gap-3">
                     {notices.map((notice) => (
-                      <div key={notice.id} className="p-3 bg-light rounded-3 border-start border-primary border-3">
-                        <div className="d-flex justify-content-between align-items-center mb-1">
+                      <div key={notice.id} className="p-3 bg-light rounded-3 border-start border-primary border-3 shadow-sm">
+                        <div className="d-flex justify-content-between align-items-start mb-1">
                           <h6 className="fw-bold text-dark mb-0">{notice.title}</h6>
-                          <span className="badge bg-secondary px-2 py-1 font-monospace" style={{ fontSize: '10px' }}>{notice.date}</span>
+                          <span className="badge bg-primary rounded-pill px-2 py-1 small">{notice.date}</span>
                         </div>
                         <p className="text-muted small mb-0">{notice.message}</p>
                       </div>

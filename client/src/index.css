@@ -1,0 +1,15 @@
+/* ==========================================================================
+   PORTAL DARK MODE COLOR OVERRIDES (COMPATIBLE WITH EXPERT LIST THEME)
+   ========================================================================== */
+
+/* Target your global layout wrapper div to force midnight black on the score screen */
+div.bg-light:has(div[style*="background-color: rgb(3, 7, 18)"]),
+div.bg-light:has(div[style*="background-color: #030712"]) {
+  background-color: #030712 !important; /* Forces your main container dark to avoid white-out glitches */
+}
+
+/* Ensure global scrollbars blend perfectly with your enterprise layout theme */
+body {
+  background-color: #030712 !important;
+  color-scheme: dark;
+}

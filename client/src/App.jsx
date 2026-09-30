@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
 import { useAuth } from './context/AuthContext'; // 🚀 Import custom session hook
 
 import Login from './pages/Login';

@@ -2,14 +2,14 @@
 const express = require("express");
 const router = express.Router();
 
-// 💡 FIX 1: Ensure you import using matching destructured curly brackets
-const { getMyResults } = require("../controllers/resultController");
+// 💡 FIXED: Import 'getStudentGrades' from your active studentController file
+const { getStudentGrades } = require("../controllers/studentController");
 
-// 💡 FIX 2: Ensure your middleware import matches its export structure exactly
+// 💡 FIXED: Keep your authentication middleware to protect student routes
 const { protect } = require("../middleware/authMiddleware");
 
 // Secure GET routing pipeline mapping architecture link matching
-// Ensure 'protect' and 'getMyResults' are fully defined functions!
-router.get("/my-results", protect, getMyResults);
+// 💡 FIXED: Changed path from "/my-results" to "/" so it perfectly handles GET /api/results
+router.get("/", protect, getStudentGrades);
 
 module.exports = router;
