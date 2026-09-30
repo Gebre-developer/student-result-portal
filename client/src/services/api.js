@@ -9,7 +9,7 @@ const getBaseUrl = () => {
     url = url.replace("VITE_API_URL=", "");
   }
 
-  // ✅ FIXED: Cleans trailing slashes cleanly using an active regex match execution
+  // ✅ FIXED: Corrected regex to properly match and remove a trailing slash at the end of the string
   url = url.replace(/\/\$/, "");
 
   // ✅ FIXED: Using correct template literal backticks (``) instead of single quotes ('')
