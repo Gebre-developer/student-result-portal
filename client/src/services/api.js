@@ -9,10 +9,10 @@ const getBaseUrl = () => {
     url = url.replace("VITE_API_URL=", "");
   }
 
-  // ✅ FIXED: Corrected regex to properly match and remove a trailing slash at the end of the string
-  url = url.replace(/\/\$/, "");
+  // ✅ FIXED: Correct regex pattern without escaping $ to match end of string
+  url = url.replace(/\/$/, "");
 
-  // ✅ FIXED: Using correct template literal backticks (``) instead of single quotes ('')
+  // ✅ Append /api if not present
   if (!url.endsWith("/api")) {
     url = `${url}/api`;
   }
@@ -39,7 +39,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     ? endpoint
     : `/${endpoint}`;
 
-  // Combines perfectly into your live server address
+  // Combines into your server address
   const response = await fetch(`${BASE_URL}${formattedEndpoint}`, {
     ...options,
     headers,

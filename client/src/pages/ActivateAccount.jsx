@@ -35,11 +35,12 @@ function ActivateAccount() {
 
     try {
       // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
-      // ✅ FIXED: JSON keys mapped to snake_case to match authController requirements
+      // ✅ FIXED: JSON keys mapped to snake_case matching backend authController requirements
       const data = await apiRequest('/auth/activate', {
         method: 'POST',
         body: JSON.stringify({ 
-          student_id: studentId.trim(), 
+          student_id: studentId.trim(),
+          full_name: fullName.trim(),
           email: email.trim(), 
           password: password 
         })

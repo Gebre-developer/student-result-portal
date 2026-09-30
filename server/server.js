@@ -6,16 +6,16 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const resultRoutes = require("./routes/resultRoutes");
-const adminRoutes = require("./routes/adminRoutes"); // 🚀 Added admin routes layout
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
-// ✅ FIXED CORS: Grant explicit permission to both local development and your live production URL
+// ✅ CORS: Grant explicit permission to both local development and your live production URL
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://student-result-portal-omega.vercel.app", // 👈 Your exact live production website domain path
+      "https://student-result-portal-omega.vercel.app",
     ],
     credentials: true,
   }),
@@ -24,11 +24,11 @@ app.use(
 app.use(express.json()); // Required to parse incoming JSON data from the frontend
 app.use(express.urlencoded({ extended: true }));
 
-// ⚡ REMOVED "/api" PREFIX: Routes match your frontend links exactly now
-app.use("/auth", authRoutes);
-app.use("/students", studentRoutes);
-app.use("/results", resultRoutes);
-app.use("/admin", adminRoutes); // 🚀 Mounted admin routes pipeline
+// ⚡ REST RESTORED: Mounted under /api prefix to match frontend api.js calls
+app.use("/api/auth", authRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/results", resultRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Base Diagnostic Route
 app.get("/", (req, res) => {

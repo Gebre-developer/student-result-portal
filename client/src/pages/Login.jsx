@@ -1,8 +1,8 @@
+// src/pages/Login.jsx - PART 1
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogIn, UserCheck, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext'; 
-// 1. IMPORT YOUR CENTRALIZED API WORKSPACE TOOL
 import { apiRequest } from '../services/api'; 
 
 function Login() {
@@ -29,8 +29,7 @@ function Login() {
     setLoading(true);
 
     try {
-      // 2. USE YOUR SECURE API REQUEST HELPER FUNCTION
-      // It handles the BASE_URL automatically (localhost or Render)
+      // Sends 'studentId' matching authController.js Solution 2
       const data = await apiRequest('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ 
@@ -39,17 +38,14 @@ function Login() {
         })
       });
 
-      // 3. SAVE ACCESS TOKENS SECURELY IF RETURNED
       if (data.token) {
         localStorage.setItem('token', data.token);
       }
 
-      // Dispatch response payload data down to global AuthContext state machine
       loginUser(data);
 
       setStatusMessage({ type: 'success', text: 'Authentication successful! Redirecting...' });
 
-      // AUTOMATED ROLE ROUTER
       setTimeout(() => {
         if (data.user && data.user.role === 'admin') {
           navigate('/admin'); 
@@ -59,18 +55,17 @@ function Login() {
       }, 1500);
 
     } catch (error) {
-      // The helper passes error messages straight here cleanly
       setStatusMessage({ type: 'danger', text: error.message || 'Authentication failed.' });
     } finally {
       setLoading(false);
     }
   };
-
+  // src/pages/Login.jsx - PART 2
   return (
     <div className="container d-flex justify-content-center align-items-center flex-grow-1 my-5">
       <div className="card shadow border-0 rounded-3 p-4 w-100" style={{ maxWidth: '450px' }}>
         
-        {/* Hub Title Identity Component Block */}
+        {/* Header Block */}
         <div className="text-center mb-4">
           <div className="bg-primary text-white d-inline-flex p-3 rounded-circle shadow-sm mb-3">
             <LogIn size={32} />
@@ -79,7 +74,7 @@ function Login() {
           <p className="text-muted small">Software Engineering Section B</p>
         </div>
 
-        {/* Dynamic Warning and Success Message Flash Container */}
+        {/* Status Alerts */}
         {statusMessage.text && (
           <div className={`alert alert-${statusMessage.type} text-center py-2 px-3 small mb-3`} role="alert">
             {statusMessage.text}
@@ -88,7 +83,7 @@ function Login() {
 
         <form onSubmit={onSubmit}>
           
-          {/* Identity Entry ID Form Field Row */}
+          {/* Student ID Field */}
           <div className="mb-3">
             <label className="form-label small fw-semibold text-secondary mb-1">Student ID / Admin Username</label>
             <div className="input-group">
@@ -96,7 +91,7 @@ function Login() {
               <input
                 type="text"
                 className="form-control border-start-0 ps-0"
-                placeholder="e.g. SE/103/15"
+                placeholder="e.g. SE/103/15 or BDU1702026"
                 name="studentId"
                 value={studentId}
                 onChange={onChange}
@@ -105,7 +100,7 @@ function Login() {
             </div>
           </div>
 
-          {/* Masked Password Field with Integrated Lucide Visibility Toggler */}
+          {/* Password Field */}
           <div className="mb-4">
             <label className="form-label small fw-semibold text-secondary mb-1">Password</label>
             <div className="input-group">
@@ -130,7 +125,7 @@ function Login() {
             </div>
           </div>
 
-          {/* Form Action Access Request Control Submission Button */}
+          {/* Submit Button */}
           <button
             type="submit"
             className="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm mb-3"
@@ -145,7 +140,7 @@ function Login() {
             )}
           </button>
 
-          {/* Dynamic Redirection Registration Block Link */}
+          {/* Redirect to Activation */}
           <div className="text-center mt-3">
             <p className="small text-muted mb-0">
               New student to the platform?{' '}
@@ -161,4 +156,5 @@ function Login() {
   );
 }
 
+// Fixed Vite default export error
 export default Login;
