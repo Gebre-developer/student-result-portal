@@ -1,15 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ==========================================================================
-   PORTAL DARK MODE COLOR OVERRIDES (COMPATIBLE WITH EXPERT LIST THEME)
+   PORTAL ROOT HARDENING — PREVENTS FLICKERING AND WHITE-OUT GLITCHES
    ========================================================================== */
 
-/* Target your global layout wrapper div to force midnight black on the score screen */
-div.bg-light:has(div[style*="background-color: rgb(3, 7, 18)"]),
-div.bg-light:has(div[style*="background-color: #030712"]) {
-  background-color: #030712 !important; /* Forces your main container dark to avoid white-out glitches */
+/* Hard-bind background color settings onto root layers so pages can never render white */
+html,
+body,
+#root {
+    background-color: #030712 !important;
+    color: #f1f5f9 !important;
+    color-scheme: dark;
+    min-height: 100vh;
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Ensure global scrollbars blend perfectly with your enterprise layout theme */
-body {
-  background-color: #030712 !important;
-  color-scheme: dark;
+/* Custom premium cyber scrollbars that match the slate aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #030712;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+    border: 2px solid #030712;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
 }
