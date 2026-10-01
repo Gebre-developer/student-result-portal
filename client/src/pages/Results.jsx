@@ -122,24 +122,24 @@ export default function Results() {
           <div>
             <div className="inline-flex items-center gap-2 border font-mono text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md" style={{ backgroundColor: 'rgba(99, 102, 241, 0.08)', borderColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-              SECURE QUANTUM SESSION ACTIVE
+              SECURE DECRYPTED SESSION MAPPED
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-3 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text">Academic Performance Matrix</h1>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-3 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text">Academic Performance Architecture</h1>
             <p className="text-slate-400 font-mono text-xs mt-2 flex items-center gap-2">
               <span className="text-slate-500">STUDENT IDENTIFIER:</span>
               <span className="text-indigo-400 font-bold px-2 py-0.5 rounded border border-slate-800" style={{ backgroundColor: 'rgba(15,23,42,0.8)' }}>{studentId}</span>
             </p>
           </div>
 
-          {/* Core Telemetry Indicators */}
-          <div className="flex gap-6 p-4 rounded-xl border border-slate-800/80 w-full md:w-auto justify-around shadow-inner backdrop-blur-md" style={{ backgroundColor: 'rgba(2, 6, 23, 0.6)' }}>
+          {/* Core Telemetry Scoreboard Indicators */}
+          <div className="flex gap-6 p-4 rounded-xl border border-slate-800/80 w-full md:w-auto justify-around shadow-xl backdrop-blur-md" style={{ backgroundColor: 'rgba(2, 6, 23, 0.6)' }}>
             <div className="text-center px-4">
               <p className="text-[9px] uppercase font-bold text-slate-500 tracking-widest">CUMULATIVE GPA</p>
               <p className="text-3xl font-black text-emerald-400 mt-1 tracking-tighter font-mono filter drop-shadow-[0_0_10px_rgba(52,211,153,0.2)]">{gpa}</p>
             </div>
             <div className="w-px bg-slate-800/80 self-stretch"></div>
             <div className="text-center px-4">
-              <p className="text-[9px] uppercase font-bold text-slate-500 tracking-widest">CREDITS REGISTERED</p>
+              <p className="text-[9px] uppercase font-bold text-slate-500 tracking-widest">TOTAL CREDITS</p>
               <p className="text-3xl font-black text-indigo-400 mt-1 tracking-tighter font-mono filter drop-shadow-[0_0_10px_rgba(129,140,248,0.2)]">{totalCredits}</p>
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function Results() {
         <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center p-3 rounded-xl border border-slate-800/40" style={{ backgroundColor: 'rgba(15, 23, 42, 0.2)' }}>
           <input 
             type="text"
-            placeholder="Filter by course code or descriptor keys..."
+            placeholder="Search course code or syllabus descriptor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full sm:max-w-xs border border-slate-800 rounded-xl px-4 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500/50 transition-all text-slate-200 shadow-inner"
@@ -159,11 +159,11 @@ export default function Results() {
           <div className="flex gap-2 shrink-0 w-full sm:w-auto">
             {isSimulating ? (
               <button onClick={resetSimulation} className="w-full sm:w-auto bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-400 text-[10px] font-bold tracking-wider uppercase px-4 py-2 rounded-xl transition-all font-mono">
-                Reset Predictive Workspace
+                Reset Mock Matrix
               </button>
             ) : (
               <button onClick={() => setIsSimulating(true)} className="w-full sm:w-auto bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-bold tracking-wider uppercase px-4 py-2 rounded-xl transition-all font-mono flex items-center justify-center gap-1.5">
-                ⚡ Initialize GPA Simulator
+                ⚙️ Simulate Target GPA
               </button>
             )}
           </div>
@@ -173,18 +173,16 @@ export default function Results() {
 
         {/* --- PREMIUM TRANS-LUCENT GRID FEEDER ROWS --- */}
         <div className="space-y-4">
-        {filteredResults.length > 0 ? (
+          {filteredResults.length > 0 ? (
             filteredResults.map((course) => {
               const isExpanded = activeCourseCode === course.course_code;
               const currentDisplayedMark = simulatedGrades[course.course_code] !== undefined ? simulatedGrades[course.course_code] : course.total_mark;
               const currentGradeState = transformGradeSchema(currentDisplayedMark);
-
               return (
                 <div 
                   key={course.course_code}
                   className={`rounded-2xl overflow-hidden border transition-all duration-300 ${isExpanded ? 'border-indigo-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] bg-slate-900/40' : 'border-slate-800/60 hover:border-slate-700/80 shadow-md bg-slate-900/10 hover:bg-slate-900/20'}`}
                 >
-                  {/* MASTER ACCORDION HEAD BLOCK */}
                   <div 
                     onClick={() => toggleCourseRow(course.course_code)}
                     className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 cursor-pointer select-none"
@@ -195,52 +193,56 @@ export default function Results() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-base font-bold text-white tracking-tight leading-tight truncate">{course.course_name}</h3>
-                        <p className="text-[11px] text-slate-500 font-mono mt-1 tracking-wide">{course.credit_hour} SEMESTRAL CR. HOURS</p>
+                        <p className="text-[11px] text-slate-500 font-mono mt-1 tracking-wide">{course.credit_hour} Semestral Weight Hours</p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between w-full sm:w-auto border-t border-slate-800/40 sm:border-0 pt-3 sm:pt-0">
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-mono font-black px-3 py-1 rounded border tracking-wider transition-all duration-300 ${currentGradeState.border} ${currentGradeState.bg} ${currentGradeState.text} ${currentGradeState.glow}`}>
-                          GRADE {currentGradeState.letter}
+                          {currentGradeState.letter}
                         </span>
                         {simulatedGrades[course.course_code] !== undefined && (
-                          <span className="text-[9px] uppercase bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono tracking-widest px-2 py-0.5 rounded-md animate-pulse">PREDICTED</span>
+                          <span className="text-[9px] uppercase bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono tracking-widest px-2 py-0.5 rounded-md">Mocked</span>
                         )}
                       </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleCourseRow(course.course_code); }}
-                        className={`ml-4 px-3 py-1.5 font-mono text-[10px] tracking-wider uppercase rounded-xl transition-all border ${isExpanded ? 'bg-indigo-600/10 text-indigo-300 border-indigo-500/30' : 'bg-slate-950/40 text-slate-400 border-slate-800/80 hover:bg-slate-800/50 hover:text-slate-200'}`}
+                        className={`ml-4 px-3 py-1.5 font-mono text-[10px] tracking-wider uppercase rounded-xl transition-all border ${isExpanded ? 'bg-indigo-600/10 text-indigo-300 border-indigo-500/30' : 'bg-slate-950/40 text-slate-400 border-slate-800/80 hover:bg-slate-800 hover:text-slate-200'}`}
                       >
-                        {isExpanded ? 'Hide ▲' : 'Inspect ▼'}
+                        {isExpanded ? 'Collapse ▲' : 'Expand Details ▼'}
                       </button>
                     </div>
                   </div>
 
-                  {/* ULTRA-THIN ALIGNED ASSESSMENT SUB-GRID VECTORS */}
+                  {/* ✅ NESTED ASSESSMENT MODULE — MAPS PERFECTLY WITH THE COGNITIVE NEON COLUMNS DATA */}
                   {isExpanded && (
                     <div className="border-t border-slate-800/40 p-5 animate-fade-in" style={{ backgroundColor: 'rgba(2, 6, 23, 0.4)' }}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-stretch">
                         
+                        {/* 1. Assignment Metric Vector (Out of 20) */}
                         <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800/50 flex justify-between sm:flex-col gap-1 shadow-inner">
-                          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest font-mono">Continuous Assessment</span>
-                          <span className="font-mono font-black text-xl text-slate-100 mt-1">{course.assignment ?? 0}<span className="text-xs text-slate-600 font-normal"> / 20</span></span>
+                          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest font-mono">Assignment (20)</span>
+                          <span className="font-mono font-black text-xl text-slate-100 mt-1">{course.assignment ?? 0}</span>
                         </div>
                         
+                        {/* 2. Midterm Assessment Metric Vector (Out of 30) */}
                         <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800/50 flex justify-between sm:flex-col gap-1 shadow-inner">
-                          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest font-mono">Midterm Examination</span>
-                          <span className="font-mono font-black text-xl text-slate-100 mt-1">{course.midterm ?? 0}<span className="text-xs text-slate-600 font-normal"> / 30</span></span>
+                          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest font-mono">Midterm (30)</span>
+                          <span className="font-mono font-black text-xl text-slate-100 mt-1">{course.midterm ?? 0}</span>
                         </div>
                         
+                        {/* 3. Final Exam Metric Vector (Out of 50) */}
                         <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800/50 flex justify-between sm:flex-col gap-1 shadow-inner">
-                          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest font-mono">Final Examination</span>
-                          <span className="font-mono font-black text-xl text-slate-100 mt-1">{course.final_exam ?? 0}<span className="text-xs text-slate-600 font-normal"> / 50</span></span>
+                          <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest font-mono">Final Exam (50)</span>
+                          <span className="font-mono font-black text-xl text-slate-100 mt-1">{course.final_exam ?? 0}</span>
                         </div>
 
+                        {/* 4. Total Mark Aggregate and Dynamic Target Gradient Selector */}
                         <div className="bg-gradient-to-br from-indigo-950/30 to-slate-900/50 p-4 rounded-xl border border-indigo-500/20 flex flex-col justify-center gap-2 shadow-md">
                           <div className="flex justify-between items-center w-full">
                             <div>
-                              <p className="text-[9px] uppercase font-bold text-indigo-400 tracking-widest font-mono">Aggregate Sum</p>
+                              <p className="text-[9px] uppercase font-bold text-indigo-400 tracking-widest font-mono">Total Mark</p>
                               <p className="text-2xl font-black text-white font-mono mt-0.5">{currentDisplayedMark}<span className="text-xs text-slate-500 font-sans font-normal">/100</span></p>
                             </div>
                           </div>
@@ -248,7 +250,7 @@ export default function Results() {
 
                           {isSimulating && (
                             <div className="mt-1 pt-1.5 border-t border-slate-800/40 w-full animate-fade-in">
-                              <label className="text-[8px] font-mono text-amber-400 block mb-1 uppercase tracking-widest font-bold">Simulate Grade Scaling:</label>
+                              <label className="text-[8px] font-mono text-amber-400 block mb-1 uppercase tracking-widest font-bold">Adjust Target Grade Simulation:</label>
                               <input 
                                 type="range" 
                                 min="0" 
